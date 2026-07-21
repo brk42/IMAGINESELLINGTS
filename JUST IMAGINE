@@ -1,0 +1,98 @@
+wait("0.2");
+--[[
+    IMAGINE SELLING TS - Sirius Rayfield GUI
+    Clean Economy Farm - No Extra Features
+]]
+
+-- Load Sirius Rayfield
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- Services
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+-- Variables
+local loopActive = false
+local loopConnection = nil
+
+-- Create Window
+local Window = Rayfield:CreateWindow({
+    Name = "IMAGINE SELLING TS",
+    LoadingTitle = "IMAGINE SELLING TS",
+    LoadingSubtitle = "Just farm that shit",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "ImagineSelling",
+        FileName = "FarmConfig"
+    },
+    KeySystem = false
+})
+
+-- Main Tab
+local MainTab = Window:CreateTab("Farm", 4483362458)
+
+-- Section
+local ControlSection = MainTab:CreateSection("Controls")
+
+-- Status Label
+local statusLabel = MainTab:CreateLabel("Status: Offline ❌")
+
+-- Farm Function
+local function executeFarm()
+    local Event = ReplicatedStorage:FindFirstChild("EconomyEvent")
+    if not Event then return end
+    
+    pcall(function()
+        Event:FireServer("RewardPassive", 5000)
+    end)
+end
+
+-- Start Loop
+local function startLoop()
+    if loopActive then return end
+    loopActive = true
+    statusLabel:Set("Status: Running ✅")
+    
+    loopConnection = RunService.Heartbeat:Connect(function()
+        if loopActive then
+            executeFarm()
+        end
+    end)
+end
+
+-- Stop Loop
+local function stopLoop()
+    if not loopActive then return end
+    loopActive = false
+    
+    if loopConnection then
+        loopConnection:Disconnect()
+        loopConnection = nil
+    end
+    
+    statusLabel:Set("Status: Offline ❌")
+end
+
+-- Toggle
+MainTab:CreateToggle({
+    Name = "Enable Farm",
+    CurrentValue = false,
+    Flag = "FarmToggle",
+    Callback = function(Value)
+        if Value then
+            startLoop()
+        else
+            stopLoop()
+        end
+    end
+})
+
+-- Button
+MainTab:CreateButton({
+    Name = "Farm Once",
+    Callback = function()
+        executeFarm()
+    end
+})
+
+print("IMAGINE SELLING TS loaded boss man")
