@@ -10,7 +10,7 @@ _G.__VESCHubLoaded = true
 local Rayfield
 
 local RAYFIELD_URLS = {
-    "https://raw.githubusercontent.com/shlexware/Rayfield/main/source",
+    "https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source",
     "https://sirius.menu/rayfield",
 }
 
@@ -265,16 +265,12 @@ task.spawn(function()
     -- COLOR TOGGLES
     -- ============================
 
+    -- Pink Blossom — handlebar (Cylinder.004) is now PINK (accent) too
     MakeRecolorToggle({
         Name = "Pink Blossom (VESC)",
         Flag = "PinkBlossom",
         Accent = Color3.fromHex("FFB7C5"),
         Body   = Color3.fromRGB(255, 255, 255),
-        BodyOverride = {
-            ["Cylinder.004"] = true,
-            ["Cylinder.006"] = true,
-            ["Cylinder.007"] = true,
-        },
         Patterns = {
             ["brake"]  = "accent",
             ["fender"] = "accent",
@@ -383,15 +379,12 @@ task.spawn(function()
     local RainbowAll_Connection = nil
     local RainbowAll_Tracked = {}
 
-    -- Returns true if the part belongs to the local player's scooter
     local function IsOwnScooterPart(obj)
         local char = LocalPlayer.Character
         if not char then return false end
 
-        -- Case 1: scooter is parented under the character
         if obj:IsDescendantOf(char) then return true end
 
-        -- Case 2: check the seat the humanoid is sitting in
         local humanoid = char:FindFirstChildOfClass("Humanoid")
         if humanoid and humanoid.SeatPart then
             local seatModel = humanoid.SeatPart:FindFirstAncestorOfClass("Model")
@@ -400,7 +393,6 @@ task.spawn(function()
             end
         end
 
-        -- Case 3: walk up to the top-level ancestor, compare with character
         local top = obj
         while top.Parent and top.Parent ~= workspace do
             top = top.Parent
@@ -414,7 +406,6 @@ task.spawn(function()
         if not obj:IsA("BasePart") then return end
         if RainbowAll_Tracked[obj] then return end
         if not IsOwnScooterPart(obj) then return end
-        -- Skip tires (remove this line if you want them rainbow too)
         if obj.Name:lower():find("wheel", 1, true) then return end
 
         RainbowAll_Tracked[obj] = true
