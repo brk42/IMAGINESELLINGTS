@@ -1,98 +1,481 @@
-wait("0.2");
---[[
-    IMAGINE SELLING TS - Sirius Rayfield GUI
-    Clean Economy Farm - No Extra Features
-]]
-
--- Load Sirius Rayfield
+-- Load Rayfield
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Services
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-
--- Variables
-local loopActive = false
-local loopConnection = nil
-
--- Create Window
 local Window = Rayfield:CreateWindow({
-    Name = "IMAGINE SELLING TS",
-    LoadingTitle = "IMAGINE SELLING TS",
-    LoadingSubtitle = "Just farm that shit",
+    Name = "VESC Hub",
+    LoadingTitle = "Loading...",
+    LoadingSubtitle = "by You",
     ConfigurationSaving = {
         Enabled = true,
-        FolderName = "ImagineSelling",
-        FileName = "FarmConfig"
+        FolderName = "VESCHub",
+        FileName = "Config"
     },
-    KeySystem = false
+    KeySystem = true,
+    KeySettings = {
+        Title = "VESC Hub",
+        Subtitle = "Key System",
+        Note = "Enter your key below",
+        FileName = "VESCKey",
+        SaveKey = true,
+        GrabKeyFromSite = false,
+        Key = {"IMNOTMAKINGYOUPAY"}
+    }
 })
 
--- Main Tab
-local MainTab = Window:CreateTab("Farm", 4483362458)
+local MainTab = Window:CreateTab("Main", 4483362458)
+MainTab:CreateSection("Visuals")
 
--- Section
-local ControlSection = MainTab:CreateSection("Controls")
+-- ============================
+-- SHARED CONFIG
+-- ============================
 
--- Status Label
-local statusLabel = MainTab:CreateLabel("Status: Offline ❌")
+local VESC_Destroy = {
+    ["Cylinder.002"] = true,
+    ["Screen"]       = true,
+    ["screen"]       = true,
+    ["Plane.018"]    = true,
+    ["Plane.019"]    = true,
+    ["Plane.004"]    = true,
+    ["Sticker"]      = true,
+    ["Stickers"]     = true,
+}
 
--- Farm Function
-local function executeFarm()
-    local Event = ReplicatedStorage:FindFirstChild("EconomyEvent")
-    if not Event then return end
-    
-    pcall(function()
-        Event:FireServer("RewardPassive", 5000)
-    end)
-end
+-- ============================
+-- RAINBOW SYSTEM
+-- ============================
 
--- Start Loop
-local function startLoop()
-    if loopActive then return end
-    loopActive = true
-    statusLabel:Set("Status: Running ✅")
-    
-    loopConnection = RunService.Heartbeat:Connect(function()
-        if loopActive then
-            executeFarm()
+local RunService = game:GetService("RunService")
+local RainbowParts = {}
+local RainbowConnection = nil
+
+local function StartRainbowLoop()
+    if RainbowConnection then return end
+    RainbowConnection = RunService.RenderStepped:Connect(function()
+        local hue = (tick() * 0.3) % 1
+        for part in pairs(RainbowParts) do
+            if part and part.Parent then
+                local c = Color3.fromHSV(hue, 1, 1)
+                pcall(function()
+                    part.Color = c
+                    part.BrickColor = BrickColor.new(c)
+                end)
+            end
         end
     end)
 end
 
--- Stop Loop
-local function stopLoop()
-    if not loopActive then return end
-    loopActive = false
-    
-    if loopConnection then
-        loopConnection:Disconnect()
-        loopConnection = nil
+local function StopRainbowLoop()
+    if RainbowConnection then
+        RainbowConnection:Disconnect()
+        RainbowConnection = nil
     end
-    
-    statusLabel:Set("Status: Offline ❌")
 end
 
--- Toggle
+local function AddRainbowPart(part, owner)
+    if not part:IsA("BasePart") then return end
+    if RainbowParts[part] then return end
+    RainbowParts[part] = { Original = part.Color, Owner = owner }
+    StartRainbowLoop()
+end
+
+local function RemoveRainbowByOwner(owner)
+    for part, data in pairs(RainbowParts) do
+        if data.Owner == owner then
+            pcall(function()
+                if part and part.Parent then
+                    part.Color = data.Original
+                end
+            end)
+            RainbowParts[part] = nil
+        end
+    end
+    if next(RainbowParts) == nil then StopRainbowLoop() end
+end
+
+-- ============================
+-- VESC (destroy only)
+-- ============================
+
+local VESC_Connection = nil
+
+local function VESC_Process(obj)
+    if VESC_Destroy[obj.Name] then
+        pcall(function() obj:Destroy() end)
+    end
+end
+
 MainTab:CreateToggle({
-    Name = "Enable Farm",
+    Name = "VESC",
     CurrentValue = false,
-    Flag = "FarmToggle",
+    Flag = "VESC",
     Callback = function(Value)
         if Value then
-            startLoop()
+            for _, obj in ipairs(workspace:GetDescendants()) do VESC_Process(obj) end
+            VESC_Connection = workspace.DescendantAdded:Connect(VESC_Process)
         else
-            stopLoop()
+            if VESC_Connection then VESC_Connection:Disconnect() VESC_Connection = nil end
         end
     end
 })
 
--- Button
-MainTab:CreateButton({
-    Name = "Farm Once",
-    Callback = function()
-        executeFarm()
+-- ============================
+-- RECOLOR TOGGLE FACTORY
+-- ============================
+
+local function MakeRecolorToggle(config)
+    local connection = nil
+    local originals  = {}
+
+    local function getNameColor(obj)
+        if config.ColorMap then
+            local c = config.ColorMap[obj.Name]
+            if c then return c end
+        end
+        if config.Patterns then
+            for pattern, color in pairs(config.Patterns) do
+                if obj.Name:lower():find(pattern:lower(), 1, true) then
+                    return color
+                end
+            end
+        end
+        return nil
+    end
+
+    local function processPart(obj)
+        if not obj:IsA("BasePart") then return end
+        if VESC_Destroy[obj.Name] then
+            pcall(function() obj:Destroy() end)
+            return
+        end
+        local color = getNameColor(obj)
+        if color then
+            if not originals[obj] then
+                originals[obj] = obj.Color
+            end
+            pcall(function() obj.Color = color end)
+        end
+    end
+
+    MainTab:CreateToggle({
+        Name = config.Name,
+        CurrentValue = false,
+        Flag = config.Flag,
+        Callback = function(Value)
+            if Value then
+                originals = {}
+                for _, obj in ipairs(workspace:GetDescendants()) do processPart(obj) end
+                connection = workspace.DescendantAdded:Connect(processPart)
+            else
+                if connection then connection:Disconnect() connection = nil end
+                for part, originalColor in pairs(originals) do
+                    pcall(function()
+                        if part and part.Parent then
+                            part.Color = originalColor
+                        end
+                    end)
+                end
+                originals = {}
+            end
+        end
+    })
+end
+
+-- ============================
+-- COLOR TOGGLES
+-- ============================
+
+MakeRecolorToggle({
+    Name = "Black and White (VESC)",
+    Flag = "BlackAndWhite",
+    ColorMap = {
+        ["FrontSuspension"] = Color3.fromRGB(255, 255, 255),
+        ["BackSuspension"]  = Color3.fromRGB(255, 255, 255),
+        ["Plane.002"]       = Color3.fromRGB(27, 42, 53),
+        ["Plane.001"]       = Color3.fromRGB(27, 42, 53),
+        ["Plane.012"]       = Color3.fromRGB(27, 42, 53),
+    },
+    Patterns = {
+        ["brake"]  = Color3.fromRGB(255, 255, 255),
+        ["fender"] = Color3.fromRGB(27, 42, 53),
+    }
+})
+
+MakeRecolorToggle({
+    Name = "Black and Red (VESC)",
+    Flag = "BlackAndRed",
+    ColorMap = {
+        ["FrontSuspension"] = Color3.fromRGB(255, 0, 0),
+        ["BackSuspension"]  = Color3.fromRGB(255, 0, 0),
+        ["Plane.002"]       = Color3.fromRGB(27, 42, 53),
+        ["Plane.001"]       = Color3.fromRGB(27, 42, 53),
+        ["Plane.012"]       = Color3.fromRGB(27, 42, 53),
+    },
+    Patterns = {
+        ["brake"]  = Color3.fromRGB(255, 0, 0),
+        ["fender"] = Color3.fromRGB(27, 42, 53),
+    }
+})
+
+MakeRecolorToggle({
+    Name = "Blackout (VESC)",
+    Flag = "Blackout",
+    ColorMap = {
+        ["FrontSuspension"] = Color3.fromRGB(27, 42, 53),
+        ["BackSuspension"]  = Color3.fromRGB(27, 42, 53),
+        ["Plane.002"]       = Color3.fromRGB(27, 42, 53),
+        ["Plane.001"]       = Color3.fromRGB(27, 42, 53),
+        ["Plane.012"]       = Color3.fromRGB(27, 42, 53),
+    },
+    Patterns = {
+        ["brake"]  = Color3.fromRGB(27, 42, 53),
+        ["fender"] = Color3.fromRGB(27, 42, 53),
+    }
+})
+
+MakeRecolorToggle({
+    Name = "Black and Purple (VESC)",
+    Flag = "BlackAndPurple",
+    ColorMap = {
+        ["FrontSuspension"] = Color3.fromRGB(98, 37, 209),
+        ["BackSuspension"]  = Color3.fromRGB(98, 37, 209),
+        ["Plane.002"]       = Color3.fromRGB(27, 42, 53),
+        ["Plane.001"]       = Color3.fromRGB(27, 42, 53),
+        ["Plane.012"]       = Color3.fromRGB(27, 42, 53),
+    },
+    Patterns = {
+        ["brake"]  = Color3.fromRGB(98, 37, 209),
+        ["fender"] = Color3.fromRGB(27, 42, 53),
+    }
+})
+
+MakeRecolorToggle({
+    Name = "Pink Blossom (VESC)",
+    Flag = "PinkBlossom",
+    ColorMap = {
+        ["FrontSuspension"] = Color3.fromHex("FFB7C5"),
+        ["BackSuspension"]  = Color3.fromHex("FFB7C5"),
+        ["Plane.002"]       = Color3.fromRGB(255, 255, 255),
+        ["Plane.001"]       = Color3.fromRGB(255, 255, 255),
+        ["Plane.012"]       = Color3.fromRGB(255, 255, 255),
+    },
+    Patterns = {
+        ["brake"]  = Color3.fromHex("FFB7C5"),
+        ["fender"] = Color3.fromHex("FFB7C5"),
+    }
+})
+
+MakeRecolorToggle({
+    Name = "Cyan Accents (VESC)",
+    Flag = "CyanAccents",
+    ColorMap = {
+        ["FrontSuspension"] = Color3.fromHex("00E5FF"),
+        ["BackSuspension"]  = Color3.fromHex("00E5FF"),
+        ["Plane.002"]       = Color3.fromRGB(255, 255, 255),
+        ["Plane.001"]       = Color3.fromRGB(255, 255, 255),
+        ["Plane.012"]       = Color3.fromRGB(255, 255, 255),
+    },
+    Patterns = {
+        ["brake"]  = Color3.fromHex("00E5FF"),
+        ["fender"] = Color3.fromHex("00E5FF"),
+    }
+})
+
+-- ============================
+-- RAINBOW SUSPENSION
+-- ============================
+
+local RainbowSusp_Connection = nil
+
+local RAINBOW_SUSP_NAMES = {
+    ["FrontSuspension"] = true,
+    ["BackSuspension"]  = true,
+}
+
+local function RainbowSusp_Process(obj)
+    if RAINBOW_SUSP_NAMES[obj.Name] and obj:IsA("BasePart") then
+        AddRainbowPart(obj, "RainbowSuspension")
+    end
+end
+
+MainTab:CreateToggle({
+    Name = "Rainbow Suspension",
+    CurrentValue = false,
+    Flag = "RainbowSuspension",
+    Callback = function(Value)
+        if Value then
+            for _, obj in ipairs(workspace:GetDescendants()) do RainbowSusp_Process(obj) end
+            RainbowSusp_Connection = workspace.DescendantAdded:Connect(RainbowSusp_Process)
+        else
+            if RainbowSusp_Connection then
+                RainbowSusp_Connection:Disconnect()
+                RainbowSusp_Connection = nil
+            end
+            RemoveRainbowByOwner("RainbowSuspension")
+        end
     end
 })
 
-print("IMAGINE SELLING TS loaded boss man")
+-- ============================
+-- RAINBOW WHOLE SCOOTER
+-- ============================
+
+local RainbowAll_Connection = nil
+
+local RAINBOW_ALL_NAMES = {
+    ["FrontSuspension"] = true,
+    ["BackSuspension"]  = true,
+    ["Plane.002"]       = true,
+    ["Plane.001"]       = true,
+    ["Plane.012"]       = true,
+    ["Plane.018"]       = true,
+    ["Plane.019"]       = true,
+    ["Plane.004"]       = true,
+    ["Cylinder.002"]    = true,
+    ["Sticker"]         = true,
+    ["Stickers"]        = true,
+}
+
+local function RainbowAll_Process(obj)
+    if not obj:IsA("BasePart") then return end
+    if RAINBOW_ALL_NAMES[obj.Name]
+       or obj.Name:lower():find("brake", 1, true)
+       or obj.Name:lower():find("fender", 1, true) then
+        AddRainbowPart(obj, "RainbowAll")
+    end
+end
+
+MainTab:CreateToggle({
+    Name = "Rainbow Scooter (All)",
+    CurrentValue = false,
+    Flag = "RainbowAll",
+    Callback = function(Value)
+        if Value then
+            for _, obj in ipairs(workspace:GetDescendants()) do RainbowAll_Process(obj) end
+            RainbowAll_Connection = workspace.DescendantAdded:Connect(RainbowAll_Process)
+        else
+            if RainbowAll_Connection then
+                RainbowAll_Connection:Disconnect()
+                RainbowAll_Connection = nil
+            end
+            RemoveRainbowByOwner("RainbowAll")
+        end
+    end
+})
+
+-- ============================
+-- WHEELIE BAR
+-- ============================
+
+local WheelieBar_Connection = nil
+local WheelieBar_Originals  = {}
+local WHEELIE_TARGET_SIZE     = Vector3.new(1.2, 1.8, 0.9)
+local WHEELIE_TARGET_ROTATION = Vector3.new(-139.218994140625, -60.93600082397461, -122.98500061035156)
+
+local function WheelieBar_Apply(box)
+    if not box:IsA("BasePart") then return end
+    if not WheelieBar_Originals[box] then
+        WheelieBar_Originals[box] = { Size = box.Size, CFrame = box.CFrame }
+    end
+    local position = box.Position
+    pcall(function()
+        box.Size = WHEELIE_TARGET_SIZE
+        box.CFrame = CFrame.new(position) * CFrame.Angles(
+            math.rad(WHEELIE_TARGET_ROTATION.X),
+            math.rad(WHEELIE_TARGET_ROTATION.Y),
+            math.rad(WHEELIE_TARGET_ROTATION.Z)
+        )
+    end)
+end
+
+local function WheelieBar_Process(obj)
+    if obj.Name == "Box106" then
+        task.wait(0.2)
+        WheelieBar_Apply(obj)
+    end
+end
+
+MainTab:CreateToggle({
+    Name = "Wheelie Bar",
+    CurrentValue = false,
+    Flag = "WheelieBar",
+    Callback = function(Value)
+        if Value then
+            WheelieBar_Originals = {}
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj.Name == "Box106" then WheelieBar_Apply(obj) end
+            end
+            WheelieBar_Connection = workspace.DescendantAdded:Connect(WheelieBar_Process)
+        else
+            if WheelieBar_Connection then
+                WheelieBar_Connection:Disconnect()
+                WheelieBar_Connection = nil
+            end
+            for part, original in pairs(WheelieBar_Originals) do
+                pcall(function()
+                    if part and part.Parent then
+                        part.Size   = original.Size
+                        part.CFrame = original.CFrame
+                    end
+                end)
+            end
+            WheelieBar_Originals = {}
+        end
+    end
+})
+
+-- ============================
+-- STRETCHED RESOLUTION
+-- ============================
+
+MainTab:CreateSection("Camera")
+
+local Stretch_Connection = nil
+local Stretch_Resolution = 0.80
+
+local function ApplyStretch()
+    local Camera = workspace.CurrentCamera
+    if not Camera then return end
+    Stretch_Connection = RunService.RenderStepped:Connect(function()
+        Camera.CFrame = Camera.CFrame * CFrame.new(
+            0, 0, 0,
+            1, 0, 0,
+            0, Stretch_Resolution, 0,
+            0, 0, 1
+        )
+    end)
+end
+
+MainTab:CreateToggle({
+    Name = "Stretched Resolution",
+    CurrentValue = false,
+    Flag = "StretchedRes",
+    Callback = function(Value)
+        if Value then
+            ApplyStretch()
+        else
+            if Stretch_Connection then
+                Stretch_Connection:Disconnect()
+                Stretch_Connection = nil
+            end
+        end
+    end
+})
+
+MainTab:CreateSlider({
+    Name = "Stretch Amount",
+    Range = {0.50, 1.00},
+    Increment = 0.01,
+    Suffix = "x",
+    CurrentValue = 0.80,
+    Flag = "StretchAmount",
+    Callback = function(Value)
+        Stretch_Resolution = Value
+        if Stretch_Connection then
+            Stretch_Connection:Disconnect()
+            Stretch_Connection = nil
+            ApplyStretch()
+        end
+    end
+})
+
+Rayfield:LoadConfiguration()
