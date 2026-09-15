@@ -77,44 +77,35 @@ task.spawn(function()
     -- ============================
 
     local VESC_Destroy = {
-        ["Cylinder.002"]      = true,
-        ["Cylinder.004"]      = true,
-        ["Cylinder.006"]      = true,
-        ["Cylinder.007"]      = true,
-        ["Screen"]            = true,
-        ["screen"]            = true,
-        ["Plane.018"]         = true,
-        ["Plane.019"]         = true,
-        ["Plane.004"]         = true,
-        ["Plane.005"]         = true,
-        ["Plane.007"]         = true,
-        ["imagetostl_mesh1"]  = true,
-        ["Sticker"]           = true,
-        ["Stickers"]          = true,
+        ["Cylinder.002"] = true,
+        ["Screen"]       = true,
+        ["screen"]       = true,
+        ["Plane.018"]    = true,
+        ["Plane.019"]    = true,
+        ["Plane.004"]    = true,
+        ["Sticker"]      = true,
+        ["Stickers"]     = true,
     }
 
-    local RAINBOW_ALL_NAMES = {
-        ["FrontSuspension"]   = true,
-        ["BackSuspension"]    = true,
-        ["Plane.001"]         = true,
-        ["Plane.002"]         = true,
-        ["Plane.005"]         = true,
-        ["Plane.007"]         = true,
-        ["Plane.012"]         = true,
-        ["Plane.018"]         = true,
-        ["Plane.019"]         = true,
-        ["Plane.004"]         = true,
-        ["Cylinder.002"]      = true,
-        ["Cylinder.004"]      = true,
-        ["Cylinder.006"]      = true,
-        ["Cylinder.007"]      = true,
-        ["imagetostl_mesh1"]  = true,
-        ["Sticker"]           = true,
-        ["Stickers"]          = true,
-        ["Box106"]            = true,
-        ["Untitled"]          = true,
-        ["2"]                 = true,
-        ["2.001"]             = true,
+    local ACCENT_PARTS = {
+        ["FrontSuspension"]  = true,
+        ["BackSuspension"]   = true,
+        ["Plane.001"]        = true,
+        ["Plane.005"]        = true,
+        ["Plane.007"]        = true,
+        ["Cylinder.004"]     = true,
+        ["Cylinder.006"]     = true,
+        ["Cylinder.007"]     = true,
+        ["imagetostl_mesh1"] = true,
+        ["2"]                = true,
+        ["2.001"]            = true,
+    }
+
+    local BODY_PARTS = {
+        ["Untitled"] = true,
+        ["Box106"]   = true,
+        ["Plane.002"] = true,
+        ["Plane.012"] = true,
     }
 
     -- ============================
@@ -169,7 +160,7 @@ task.spawn(function()
     end
 
     -- ============================
-    -- VESC (destroy only)
+    -- VESC
     -- ============================
 
     local VESC_Connection = nil
@@ -203,17 +194,28 @@ task.spawn(function()
         local originals  = {}
 
         local function getNameColor(obj)
-            if config.ExactNames and config.ExactNames[obj.Name] then
-                return config.ExactNames[obj.Name]
+            if config.BodyOverride and config.BodyOverride[obj.Name] then
+                return config.Body
             end
-            if config.ColorMap then
-                local c = config.ColorMap[obj.Name]
-                if c then return c end
+            if config.AccentOverride and config.AccentOverride[obj.Name] then
+                return config.Accent
             end
+
+            if config.ExactAccent and config.ExactAccent[obj.Name] then
+                return config.Accent
+            end
+            if config.ExactBody and config.ExactBody[obj.Name] then
+                return config.Body
+            end
+
+            if ACCENT_PARTS[obj.Name] then return config.Accent end
+            if BODY_PARTS[obj.Name]   then return config.Body   end
+
             if config.Patterns then
-                for pattern, color in pairs(config.Patterns) do
+                for pattern, kind in pairs(config.Patterns) do
                     if obj.Name:lower():find(pattern:lower(), 1, true) then
-                        return color
+                        if kind == "accent" then return config.Accent end
+                        if kind == "body"   then return config.Body   end
                     end
                 end
             end
@@ -263,177 +265,79 @@ task.spawn(function()
     -- COLOR TOGGLES
     -- ============================
 
-    -- Black and White
-    MakeRecolorToggle({
-        Name = "Black and White (VESC)",
-        Flag = "BlackAndWhite",
-        ColorMap = {
-            ["FrontSuspension"]   = Color3.fromRGB(255, 255, 255),
-            ["BackSuspension"]    = Color3.fromRGB(255, 255, 255),
-            ["Plane.001"]         = Color3.fromRGB(27, 42, 53),
-            ["Plane.005"]         = Color3.fromRGB(27, 42, 53),
-            ["Plane.007"]         = Color3.fromRGB(27, 42, 53),
-            ["Cylinder.004"]      = Color3.fromRGB(27, 42, 53),
-            ["Cylinder.006"]      = Color3.fromRGB(27, 42, 53),
-            ["Cylinder.007"]      = Color3.fromRGB(27, 42, 53),
-            ["imagetostl_mesh1"]  = Color3.fromRGB(27, 42, 53),
-            ["Box106"]            = Color3.fromRGB(255, 255, 255),
-            ["Untitled"]          = Color3.fromRGB(255, 255, 255),
-            ["Plane.002"]         = Color3.fromRGB(255, 255, 255),
-            ["Plane.012"]         = Color3.fromRGB(255, 255, 255),
-        },
-        ExactNames = {
-            ["2"]     = Color3.fromRGB(255, 255, 255),
-            ["2.001"] = Color3.fromRGB(255, 255, 255),
-        },
-        Patterns = {
-            ["brake"]  = Color3.fromRGB(255, 255, 255),
-            ["fender"] = Color3.fromRGB(255, 255, 255),
-        }
-    })
-
-    -- Black and Red
-    MakeRecolorToggle({
-        Name = "Black and Red (VESC)",
-        Flag = "BlackAndRed",
-        ColorMap = {
-            ["FrontSuspension"]   = Color3.fromRGB(255, 0, 0),
-            ["BackSuspension"]    = Color3.fromRGB(255, 0, 0),
-            ["Plane.001"]         = Color3.fromRGB(27, 42, 53),
-            ["Plane.005"]         = Color3.fromRGB(27, 42, 53),
-            ["Plane.007"]         = Color3.fromRGB(27, 42, 53),
-            ["Cylinder.004"]      = Color3.fromRGB(27, 42, 53),
-            ["Cylinder.006"]      = Color3.fromRGB(27, 42, 53),
-            ["Cylinder.007"]      = Color3.fromRGB(27, 42, 53),
-            ["imagetostl_mesh1"]  = Color3.fromRGB(27, 42, 53),
-            ["Box106"]            = Color3.fromRGB(27, 42, 53),
-            ["Untitled"]          = Color3.fromRGB(27, 42, 53),
-            ["Plane.002"]         = Color3.fromRGB(27, 42, 53),
-            ["Plane.012"]         = Color3.fromRGB(27, 42, 53),
-        },
-        ExactNames = {
-            ["2"]     = Color3.fromRGB(255, 0, 0),
-            ["2.001"] = Color3.fromRGB(255, 0, 0),
-        },
-        Patterns = {
-            ["brake"]  = Color3.fromRGB(255, 0, 0),
-            ["fender"] = Color3.fromRGB(27, 42, 53),
-        }
-    })
-
-    -- Blackout
-    MakeRecolorToggle({
-        Name = "Blackout (VESC)",
-        Flag = "Blackout",
-        ColorMap = {
-            ["FrontSuspension"]   = Color3.fromRGB(27, 42, 53),
-            ["BackSuspension"]    = Color3.fromRGB(27, 42, 53),
-            ["Plane.001"]         = Color3.fromRGB(27, 42, 53),
-            ["Plane.005"]         = Color3.fromRGB(27, 42, 53),
-            ["Plane.007"]         = Color3.fromRGB(27, 42, 53),
-            ["Cylinder.004"]      = Color3.fromRGB(27, 42, 53),
-            ["Cylinder.006"]      = Color3.fromRGB(27, 42, 53),
-            ["Cylinder.007"]      = Color3.fromRGB(27, 42, 53),
-            ["imagetostl_mesh1"]  = Color3.fromRGB(27, 42, 53),
-            ["Box106"]            = Color3.fromRGB(27, 42, 53),
-            ["Untitled"]          = Color3.fromRGB(27, 42, 53),
-            ["Plane.002"]         = Color3.fromRGB(27, 42, 53),
-            ["Plane.012"]         = Color3.fromRGB(27, 42, 53),
-        },
-        ExactNames = {
-            ["2"]     = Color3.fromRGB(27, 42, 53),
-            ["2.001"] = Color3.fromRGB(27, 42, 53),
-        },
-        Patterns = {
-            ["brake"]  = Color3.fromRGB(27, 42, 53),
-            ["fender"] = Color3.fromRGB(27, 42, 53),
-        }
-    })
-
-    -- Black and Purple
-    MakeRecolorToggle({
-        Name = "Black and Purple (VESC)",
-        Flag = "BlackAndPurple",
-        ColorMap = {
-            ["FrontSuspension"]   = Color3.fromRGB(98, 37, 209),
-            ["BackSuspension"]    = Color3.fromRGB(98, 37, 209),
-            ["Plane.001"]         = Color3.fromRGB(27, 42, 53),
-            ["Plane.005"]         = Color3.fromRGB(27, 42, 53),
-            ["Plane.007"]         = Color3.fromRGB(27, 42, 53),
-            ["Cylinder.004"]      = Color3.fromRGB(27, 42, 53),
-            ["Cylinder.006"]      = Color3.fromRGB(27, 42, 53),
-            ["Cylinder.007"]      = Color3.fromRGB(27, 42, 53),
-            ["imagetostl_mesh1"]  = Color3.fromRGB(27, 42, 53),
-            ["Box106"]            = Color3.fromRGB(98, 37, 209),
-            ["Untitled"]          = Color3.fromRGB(98, 37, 209),
-            ["Plane.002"]         = Color3.fromRGB(27, 42, 53),
-            ["Plane.012"]         = Color3.fromRGB(27, 42, 53),
-        },
-        ExactNames = {
-            ["2"]     = Color3.fromRGB(98, 37, 209),
-            ["2.001"] = Color3.fromRGB(98, 37, 209),
-        },
-        Patterns = {
-            ["brake"]  = Color3.fromRGB(98, 37, 209),
-            ["fender"] = Color3.fromRGB(27, 42, 53),
-        }
-    })
-
-    -- Pink Blossom
     MakeRecolorToggle({
         Name = "Pink Blossom (VESC)",
         Flag = "PinkBlossom",
-        ColorMap = {
-            ["FrontSuspension"]   = Color3.fromHex("FFB7C5"),
-            ["BackSuspension"]    = Color3.fromHex("FFB7C5"),
-            ["Plane.001"]         = Color3.fromHex("FFB7C5"),
-            ["Plane.005"]         = Color3.fromHex("FFB7C5"),
-            ["Plane.007"]         = Color3.fromHex("FFB7C5"),
-            ["Cylinder.004"]      = Color3.fromHex("FFB7C5"),
-            ["Cylinder.006"]      = Color3.fromHex("FFB7C5"),
-            ["Cylinder.007"]      = Color3.fromHex("FFB7C5"),
-            ["imagetostl_mesh1"]  = Color3.fromHex("FFB7C5"),
-            ["Box106"]            = Color3.fromHex("FFB7C5"),
-            ["Untitled"]          = Color3.fromHex("FFB7C5"),
-            ["Plane.002"]         = Color3.fromRGB(255, 255, 255),
-            ["Plane.012"]         = Color3.fromRGB(255, 255, 255),
-        },
-        ExactNames = {
-            ["2"]     = Color3.fromHex("FFB7C5"),
-            ["2.001"] = Color3.fromHex("FFB7C5"),
+        Accent = Color3.fromHex("FFB7C5"),
+        Body   = Color3.fromRGB(255, 255, 255),
+        BodyOverride = {
+            ["Cylinder.004"] = true,
+            ["Cylinder.006"] = true,
+            ["Cylinder.007"] = true,
         },
         Patterns = {
-            ["brake"]  = Color3.fromHex("FFB7C5"),
-            ["fender"] = Color3.fromHex("FFB7C5"),
+            ["brake"]  = "accent",
+            ["fender"] = "accent",
         }
     })
 
-    -- Cyan Accents
     MakeRecolorToggle({
         Name = "Cyan Accents (VESC)",
         Flag = "CyanAccents",
-        ColorMap = {
-            ["FrontSuspension"]   = Color3.fromHex("00E5FF"),
-            ["BackSuspension"]    = Color3.fromHex("00E5FF"),
-            ["Plane.001"]         = Color3.fromHex("00E5FF"),
-            ["Plane.005"]         = Color3.fromHex("00E5FF"),
-            ["Plane.007"]         = Color3.fromHex("00E5FF"),
-            ["Cylinder.004"]      = Color3.fromHex("00E5FF"),
-            ["Cylinder.006"]      = Color3.fromHex("00E5FF"),
-            ["Cylinder.007"]      = Color3.fromHex("00E5FF"),
-            ["imagetostl_mesh1"]  = Color3.fromHex("00E5FF"),
-            ["Box106"]            = Color3.fromHex("00E5FF"),
-            ["Untitled"]          = Color3.fromHex("00E5FF"),
-            ["Plane.002"]         = Color3.fromRGB(255, 255, 255),
-            ["Plane.012"]         = Color3.fromRGB(255, 255, 255),
-        },
-        ExactNames = {
-            ["2"]     = Color3.fromHex("00E5FF"),
-            ["2.001"] = Color3.fromHex("00E5FF"),
+        Accent = Color3.fromHex("00E5FF"),
+        Body   = Color3.fromRGB(255, 255, 255),
+        BodyOverride = {
+            ["Cylinder.004"] = true,
+            ["Cylinder.006"] = true,
+            ["Cylinder.007"] = true,
         },
         Patterns = {
-            ["brake"]  = Color3.fromHex("00E5FF"),
-            ["fender"] = Color3.fromHex("00E5FF"),
+            ["brake"]  = "accent",
+            ["fender"] = "accent",
+        }
+    })
+
+    MakeRecolorToggle({
+        Name = "Black and White (VESC)",
+        Flag = "BlackAndWhite",
+        Accent = Color3.fromRGB(255, 255, 255),
+        Body   = Color3.fromRGB(27, 42, 53),
+        Patterns = {
+            ["brake"]  = "accent",
+            ["fender"] = "body",
+        }
+    })
+
+    MakeRecolorToggle({
+        Name = "Black and Red (VESC)",
+        Flag = "BlackAndRed",
+        Accent = Color3.fromRGB(255, 0, 0),
+        Body   = Color3.fromRGB(27, 42, 53),
+        Patterns = {
+            ["brake"]  = "accent",
+            ["fender"] = "body",
+        }
+    })
+
+    MakeRecolorToggle({
+        Name = "Blackout (VESC)",
+        Flag = "Blackout",
+        Accent = Color3.fromRGB(27, 42, 53),
+        Body   = Color3.fromRGB(27, 42, 53),
+        Patterns = {
+            ["brake"]  = "accent",
+            ["fender"] = "body",
+        }
+    })
+
+    MakeRecolorToggle({
+        Name = "Black and Purple (VESC)",
+        Flag = "BlackAndPurple",
+        Accent = Color3.fromRGB(98, 37, 209),
+        Body   = Color3.fromRGB(27, 42, 53),
+        Patterns = {
+            ["brake"]  = "accent",
+            ["fender"] = "body",
         }
     })
 
@@ -473,18 +377,48 @@ task.spawn(function()
     })
 
     -- ============================
-    -- RAINBOW WHOLE SCOOTER
+    -- RAINBOW WHOLE SCOOTER (EVERY PART)
     -- ============================
 
     local RainbowAll_Connection = nil
+    local RainbowAll_Tracked = {}
+
+    -- Returns true if the part belongs to the local player's scooter
+    local function IsOwnScooterPart(obj)
+        local char = LocalPlayer.Character
+        if not char then return false end
+
+        -- Case 1: scooter is parented under the character
+        if obj:IsDescendantOf(char) then return true end
+
+        -- Case 2: check the seat the humanoid is sitting in
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid and humanoid.SeatPart then
+            local seatModel = humanoid.SeatPart:FindFirstAncestorOfClass("Model")
+            if seatModel and obj:IsDescendantOf(seatModel) then
+                return true
+            end
+        end
+
+        -- Case 3: walk up to the top-level ancestor, compare with character
+        local top = obj
+        while top.Parent and top.Parent ~= workspace do
+            top = top.Parent
+        end
+        if top == char then return true end
+
+        return false
+    end
 
     local function RainbowAll_Process(obj)
         if not obj:IsA("BasePart") then return end
-        if RAINBOW_ALL_NAMES[obj.Name]
-           or obj.Name:lower():find("brake", 1, true)
-           or obj.Name:lower():find("fender", 1, true) then
-            AddRainbowPart(obj, "RainbowAll")
-        end
+        if RainbowAll_Tracked[obj] then return end
+        if not IsOwnScooterPart(obj) then return end
+        -- Skip tires (remove this line if you want them rainbow too)
+        if obj.Name:lower():find("wheel", 1, true) then return end
+
+        RainbowAll_Tracked[obj] = true
+        AddRainbowPart(obj, "RainbowAll")
     end
 
     MainTab:CreateToggle({
@@ -493,13 +427,17 @@ task.spawn(function()
         Flag = "RainbowAll",
         Callback = function(Value)
             if Value then
-                for _, obj in ipairs(workspace:GetDescendants()) do RainbowAll_Process(obj) end
+                RainbowAll_Tracked = {}
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    RainbowAll_Process(obj)
+                end
                 RainbowAll_Connection = workspace.DescendantAdded:Connect(RainbowAll_Process)
             else
                 if RainbowAll_Connection then
                     RainbowAll_Connection:Disconnect()
                     RainbowAll_Connection = nil
                 end
+                RainbowAll_Tracked = {}
                 RemoveRainbowByOwner("RainbowAll")
             end
         end
@@ -567,7 +505,7 @@ task.spawn(function()
     })
 
     -- ============================
-    -- AUTO WHEELIE (anchors you in place)
+    -- AUTO WHEELIE
     -- ============================
 
     local AutoWheelie_Anchored = false
