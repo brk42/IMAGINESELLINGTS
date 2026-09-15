@@ -9,6 +9,7 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 -- ============================
 -- KEY SYSTEM
@@ -26,7 +27,7 @@ local function hasValidKey()
 end
 
 if not hasValidKey() then
-    local input = nil
+    local submitted = false
     local promptGui = Instance.new("ScreenGui")
     promptGui.Name = "VESCKeyPrompt"
     promptGui.ResetOnSpawn = false
@@ -85,7 +86,6 @@ if not hasValidKey() then
     submit.Parent = frame
     Instance.new("UICorner", submit).CornerRadius = UDim.new(0, 8)
 
-    local submitted = false
     submit.MouseButton1Click:Connect(function()
         if box.Text == KEY then
             submitted = true
@@ -99,7 +99,6 @@ if not hasValidKey() then
         end
     end)
 
-    -- Wait until the correct key is entered
     while not submitted do
         task.wait(0.1)
     end
@@ -111,7 +110,7 @@ end
 
 local Window = Fluent:CreateWindow({
     Title = "VESC Hub",
-    SubTitle = "by SSUNSS1W (BUNZ TABOR PLAYER)",
+    SubTitle = "by SSUNSS1W",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = true,
@@ -389,6 +388,370 @@ MakeRecolorToggle({
     }
 })
 
+MakeRecolorToggle({
+    Name = "White and Red (VESC)",
+    Flag = "WhiteAndRed",
+    Accent = Color3.fromRGB(255, 0, 0),
+    Body   = Color3.fromRGB(255, 255, 255),
+    Patterns = {
+        ["brake"]  = "accent",
+        ["fender"] = "accent",
+    }
+})
+
+MakeRecolorToggle({
+    Name = "Purple Blackout (VESC)",
+    Flag = "PurpleBlackout",
+    Accent = Color3.fromHex("2E0A3E"),
+    Body   = Color3.fromHex("0E0B14"),
+    Patterns = {
+        ["brake"]  = "accent",
+        ["fender"] = "accent",
+    }
+})
+
+-- ============================
+-- CUSTOM COLOR (granular per-part)
+-- ============================
+
+Tabs.Main:AddSection("Custom Color")
+
+local Custom_Enabled = false
+local Custom_Connection = nil
+local Custom_Originals = {}
+
+local Custom_Color = {
+    Suspension = Color3.fromRGB(255, 0, 0),
+    Stem       = Color3.fromRGB(255, 0, 0),
+    Handlebar  = Color3.fromRGB(255, 255, 255),
+    Grips      = Color3.fromRGB(255, 255, 255),
+    MiddlePart = Color3.fromRGB(255, 0, 0),
+    Deck       = Color3.fromRGB(255, 255, 255),
+    WheelieBar = Color3.fromRGB(255, 255, 255),
+    Body       = Color3.fromRGB(255, 255, 255),
+}
+
+local Custom_Groups = {
+    ["FrontSuspension"] = "Suspension",
+    ["BackSuspension"]  = "Suspension",
+    ["Plane.001"]       = "Stem",
+    ["Plane.005"]       = "Stem",
+    ["Plane.007"]       = "Stem",
+    ["Cylinder.004"]    = "Handlebar",
+    ["Cylinder.006"]    = "Grips",
+    ["Cylinder.007"]    = "Grips",
+    ["2"]               = "MiddlePart",
+    ["2.001"]           = "MiddlePart",
+    ["imagetostl_mesh1"]= "MiddlePart",
+    ["Untitled"]        = "Deck",
+    ["Box106"]          = "WheelieBar",
+    ["Plane.002"]       = "Body",
+    ["Plane.012"]       = "Body",
+}
+
+local function Custom_GetColorFor(obj)
+    local group = Custom_Groups[obj.Name]
+    if group then
+        return Custom_Color[group]
+    end
+    local lower = obj.Name:lower()
+    if lower:find("brake", 1, true)  then return Custom_Color.MiddlePart end
+    if lower:find("fender", 1, true) then return Custom_Color.Body       end
+    return nil
+end
+
+local function Custom_ProcessPart(obj)
+    if not Custom_Enabled then return end
+    if not obj:IsA("BasePart") then return end
+    if VESC_Destroy[obj.Name] then
+        pcall(function() obj:Destroy() end)
+        return
+    end
+    local color = Custom_GetColorFor(obj)
+    if color then
+        if not Custom_Originals[obj] then
+            Custom_Originals[obj] = obj.Color
+        end
+        pcall(function() obj.Color = color end)
+    end
+end
+
+local function Custom_ApplyAll()
+    if not Custom_Enabled then return end
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        Custom_ProcessPart(obj)
+    end
+end
+
+local function Custom_Restore()
+    for part, originalColor in pairs(Custom_Originals) do
+        pcall(function()
+            if part and part.Parent then
+                part.Color = originalColor
+            end
+        end)
+    end
+    Custom_Originals = {}
+end
+
+Tabs.Main:AddToggle("CustomColorEnabled", {
+    Title = "Enable Custom Color",
+    Default = false,
+    Callback = function(Value)
+        Custom_Enabled = Value
+        if Value then
+            Custom_Originals = {}
+            Custom_ApplyAll()
+            if Custom_Connection then Custom_Connection:Disconnect() end
+            Custom_Connection = workspace.DescendantAdded:Connect(Custom_ProcessPart)
+        else
+            if Custom_Connection then
+                Custom_Connection:Disconnect()
+                Custom_Connection = nil
+            end
+            Custom_Restore()
+        end
+    end
+})
+
+Tabs.Main:AddColorpicker("CustomSuspension", {
+    Title = "Suspension Color",
+    Default = Custom_Color.Suspension,
+    Callback = function(Value)
+        Custom_Color.Suspension = Value
+        if Custom_Enabled then Custom_ApplyAll() end
+    end
+})
+
+Tabs.Main:AddColorpicker("CustomStem", {
+    Title = "Stem / Fork Color",
+    Default = Custom_Color.Stem,
+    Callback = function(Value)
+        Custom_Color.Stem = Value
+        if Custom_Enabled then Custom_ApplyAll() end
+    end
+})
+
+Tabs.Main:AddColorpicker("CustomHandlebar", {
+    Title = "Handlebar Color",
+    Default = Custom_Color.Handlebar,
+    Callback = function(Value)
+        Custom_Color.Handlebar = Value
+        if Custom_Enabled then Custom_ApplyAll() end
+    end
+})
+
+Tabs.Main:AddColorpicker("CustomGrips", {
+    Title = "Grip Color",
+    Default = Custom_Color.Grips,
+    Callback = function(Value)
+        Custom_Color.Grips = Value
+        if Custom_Enabled then Custom_ApplyAll() end
+    end
+})
+
+Tabs.Main:AddColorpicker("CustomMiddlePart", {
+    Title = "MIDDLEPART Color",
+    Default = Custom_Color.MiddlePart,
+    Callback = function(Value)
+        Custom_Color.MiddlePart = Value
+        if Custom_Enabled then Custom_ApplyAll() end
+    end
+})
+
+Tabs.Main:AddColorpicker("CustomDeck", {
+    Title = "Deck Color",
+    Default = Custom_Color.Deck,
+    Callback = function(Value)
+        Custom_Color.Deck = Value
+        if Custom_Enabled then Custom_ApplyAll() end
+    end
+})
+
+Tabs.Main:AddColorpicker("CustomWheelieBar", {
+    Title = "Wheelie Bar Color",
+    Default = Custom_Color.WheelieBar,
+    Callback = function(Value)
+        Custom_Color.WheelieBar = Value
+        if Custom_Enabled then Custom_ApplyAll() end
+    end
+})
+
+Tabs.Main:AddColorpicker("CustomBody", {
+    Title = "Body Panel Color",
+    Default = Custom_Color.Body,
+    Callback = function(Value)
+        Custom_Color.Body = Value
+        if Custom_Enabled then Custom_ApplyAll() end
+    end
+})
+
+-- ============================
+-- UNDERGLOW (owner-aware, starts ON)
+-- ============================
+
+local Underglow_Enabled = true
+local Underglow_Color = Color3.fromRGB(0, 220, 255)
+local MyScooter = nil
+
+local function FindMyScooter()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj.Name:lower():find("kukirin", 1, true) then
+            local ownerName = nil
+            local attrOwner = obj:GetAttribute("Owner")
+                or obj:GetAttribute("ScooterOwner")
+                or obj:GetAttribute("owner")
+                or obj:GetAttribute("scooterOwner")
+            if attrOwner then ownerName = tostring(attrOwner) end
+
+            if not ownerName then
+                local ownerPart = obj:FindFirstChild("ScooterOwner")
+                    or obj:FindFirstChild("Owner")
+                    or obj:FindFirstChild("owner")
+                    or obj:FindFirstChild("scooterOwner")
+                if ownerPart then
+                    if ownerPart:IsA("ObjectValue") then
+                        if ownerPart.Value then ownerName = ownerPart.Value.Name end
+                    elseif ownerPart:IsA("StringValue") then
+                        ownerName = ownerPart.Value
+                    end
+                end
+            end
+
+            if not ownerName then
+                for _, child in ipairs(obj:GetChildren()) do
+                    if child.Name:lower():find("owner", 1, true) then
+                        if child:IsA("ObjectValue") and child.Value then
+                            ownerName = child.Value.Name
+                            break
+                        elseif child:IsA("StringValue") then
+                            ownerName = child.Value
+                            break
+                        end
+                    end
+                end
+            end
+
+            if ownerName and ownerName == LocalPlayer.Name then
+                return obj
+            end
+        end
+    end
+    return nil
+end
+
+local function GetUnderglowFolders()
+    local folders = {}
+    local global = Workspace:FindFirstChild("RainbowUnderglowLocal")
+    if global then table.insert(folders, global) end
+    if MyScooter then
+        local inner = MyScooter:FindFirstChild("RainbowUnderglowLocal")
+        if inner then table.insert(folders, inner) end
+    end
+    return folders
+end
+
+local function EnableUnderglowAttribute(scooter)
+    if not scooter then return end
+    pcall(function() scooter:SetAttribute("RainbowUnderglow", true) end)
+    pcall(function() scooter:SetAttribute("RainbowUnderglowEnabled", true) end)
+    pcall(function() scooter:SetAttribute("Underglow", true) end)
+    pcall(function() scooter:SetAttribute("UnderglowEnabled", true) end)
+end
+
+local function ApplyUnderglow()
+    if not MyScooter then return end
+
+    for _, obj in ipairs(MyScooter:GetDescendants()) do
+        if obj:IsA("BasePart") and (obj.Name == "Underglow" or obj.Name == "UnderglowPool") then
+            for _, c in ipairs(obj:GetDescendants()) do
+                if c:IsA("Light") then
+                    c.Enabled = Underglow_Enabled
+                    if Underglow_Enabled then c.Color = Underglow_Color end
+                elseif c:IsA("ImageLabel") then
+                    c.Visible = Underglow_Enabled
+                    if Underglow_Enabled then c.ImageColor3 = Underglow_Color end
+                end
+            end
+            if Underglow_Enabled then obj.Color = Underglow_Color end
+        end
+    end
+
+    for _, folder in ipairs(GetUnderglowFolders()) do
+        for _, obj in ipairs(folder:GetChildren()) do
+            if obj:IsA("BasePart") and (obj.Name == "Underglow" or obj.Name == "UnderglowPool") then
+                for _, c in ipairs(obj:GetDescendants()) do
+                    if c:IsA("Light") then
+                        c.Enabled = Underglow_Enabled
+                        if Underglow_Enabled then c.Color = Underglow_Color end
+                    elseif c:IsA("ImageLabel") then
+                        c.Visible = Underglow_Enabled
+                        if Underglow_Enabled then c.ImageColor3 = Underglow_Color end
+                    end
+                end
+                if Underglow_Enabled then obj.Color = Underglow_Color end
+            end
+        end
+    end
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        MyScooter = FindMyScooter()
+        if MyScooter then
+            EnableUnderglowAttribute(MyScooter)
+        end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if Underglow_Enabled and MyScooter then
+        ApplyUnderglow()
+        task.defer(ApplyUnderglow)
+    end
+end)
+
+Tabs.Main:AddToggle("Underglow", {
+    Title = "Underglow",
+    Default = true,
+    Callback = function(Value)
+        Underglow_Enabled = Value
+        ApplyUnderglow()
+        if not Value then
+            if MyScooter then
+                for _, obj in ipairs(MyScooter:GetDescendants()) do
+                    if obj:IsA("BasePart") and (obj.Name == "Underglow" or obj.Name == "UnderglowPool") then
+                        for _, c in ipairs(obj:GetDescendants()) do
+                            if c:IsA("Light") then c.Enabled = false
+                            elseif c:IsA("ImageLabel") then c.Visible = false end
+                        end
+                    end
+                end
+            end
+            for _, folder in ipairs(GetUnderglowFolders()) do
+                for _, obj in ipairs(folder:GetChildren()) do
+                    if obj:IsA("BasePart") and (obj.Name == "Underglow" or obj.Name == "UnderglowPool") then
+                        for _, c in ipairs(obj:GetDescendants()) do
+                            if c:IsA("Light") then c.Enabled = false
+                            elseif c:IsA("ImageLabel") then c.Visible = false end
+                        end
+                    end
+                end
+            end
+        end
+    end
+})
+
+Tabs.Main:AddColorpicker("UnderglowColor", {
+    Title = "Underglow Color",
+    Default = Color3.fromRGB(0, 220, 255),
+    Callback = function(Value)
+        Underglow_Color = Value
+        if Underglow_Enabled then ApplyUnderglow() end
+    end
+})
+
 -- ============================
 -- RAINBOW SUSPENSION
 -- ============================
@@ -475,6 +838,42 @@ Tabs.Main:AddToggle("RainbowAll", {
                 RainbowAll_Connection = nil
             end
             RemoveRainbowByOwner("RainbowAll")
+        end
+    end
+})
+
+-- ============================
+-- REMOVE BACK FENDER
+-- ============================
+
+local BackFender_Connection = nil
+
+local BACK_FENDER_NAMES = {
+    ["VisualBackFender"] = true,
+    ["Object002.009"]    = true,
+    ["TailLight"]        = true,
+}
+
+local function BackFender_Process(obj)
+    if BACK_FENDER_NAMES[obj.Name] then
+        pcall(function() obj:Destroy() end)
+    end
+end
+
+Tabs.Main:AddToggle("RemoveBackFender", {
+    Title = "Remove Back Fender",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                BackFender_Process(obj)
+            end
+            BackFender_Connection = workspace.DescendantAdded:Connect(BackFender_Process)
+        else
+            if BackFender_Connection then
+                BackFender_Connection:Disconnect()
+                BackFender_Connection = nil
+            end
         end
     end
 })
