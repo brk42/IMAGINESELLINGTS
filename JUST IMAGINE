@@ -265,12 +265,16 @@ task.spawn(function()
     -- COLOR TOGGLES
     -- ============================
 
-    -- Pink Blossom — handlebar (Cylinder.004) is now PINK (accent) too
+    -- Pink Blossom — handlebar pink, grips white
     MakeRecolorToggle({
         Name = "Pink Blossom (VESC)",
         Flag = "PinkBlossom",
         Accent = Color3.fromHex("FFB7C5"),
         Body   = Color3.fromRGB(255, 255, 255),
+        BodyOverride = {
+            ["Cylinder.006"] = true,  -- left grip  -> white
+            ["Cylinder.007"] = true,  -- right grip -> white
+        },
         Patterns = {
             ["brake"]  = "accent",
             ["fender"] = "accent",
