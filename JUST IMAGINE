@@ -1,583 +1,644 @@
 -- ============================
--- ROBUST RAYFIELD LOADER
+-- FLUENT LOADER
 -- ============================
 
-if _G.__VESCHubLoaded then
-    pcall(function() Rayfield:Destroy() end)
-end
-_G.__VESCHubLoaded = true
-
-local Rayfield
-
-local RAYFIELD_URLS = {
-    "https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source",
-    "https://sirius.menu/rayfield",
-}
-
-local lastErr
-for _, url in ipairs(RAYFIELD_URLS) do
-    local ok, result = pcall(function()
-        return loadstring(game:HttpGet(url))()
-    end)
-    if ok and result then
-        Rayfield = result
-        break
-    else
-        lastErr = result
-        warn("[VESC Hub] Rayfield load failed from " .. url .. ": " .. tostring(result))
-    end
-end
-
-if not Rayfield then
-    return error("[VESC Hub] Could not load Rayfield. Error: " .. tostring(lastErr))
-end
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
-if not LocalPlayer:FindFirstChild("PlayerGui") then
-    LocalPlayer:WaitForChild("PlayerGui", 10)
+-- ============================
+-- KEY SYSTEM
+-- ============================
+
+local KEY = "IMNOTMAKINGYOUPAY"
+local KEY_FILE = "VESCKey.txt"
+
+local function hasValidKey()
+    if isfile and isfile(KEY_FILE) then
+        local saved = readfile(KEY_FILE)
+        if saved == KEY then return true end
+    end
+    return false
 end
 
-task.wait(0.5)
+if not hasValidKey() then
+    local input = nil
+    local promptGui = Instance.new("ScreenGui")
+    promptGui.Name = "VESCKeyPrompt"
+    promptGui.ResetOnSpawn = false
+    promptGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local Window = Rayfield:CreateWindow({
-    Name = "VESC Hub",
-    LoadingTitle = "Loading...",
-    LoadingSubtitle = "by SSUNSS1W (BUNZ TABOR PLAYER)",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "VESCHub",
-        FileName = "Config"
-    },
-    KeySystem = true,
-    KeySettings = {
-        Title = "VESC Hub",
-        Subtitle = "Key System",
-        Note = "Enter your key below (THE KEY: IMNOTMAKINGYOUPAY)",
-        FileName = "VESCKey",
-        SaveKey = true,
-        GrabKeyFromSite = false,
-        Key = {"IMNOTMAKINGYOUPAY"}
-    }
-})
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 400, 0, 180)
+    frame.Position = UDim2.new(0.5, -200, 0.5, -90)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    frame.BorderSizePixel = 0
+    frame.Parent = promptGui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 
-pcall(function() Rayfield:LoadConfiguration() end)
-task.wait(0.5)
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.Position = UDim2.new(0, 0, 0, 10)
+    title.BackgroundTransparency = 1
+    title.Text = "VESC Hub — Key System"
+    title.TextColor3 = Color3.fromRGB(200, 130, 255)
+    title.TextSize = 22
+    title.Font = Enum.Font.GothamBold
+    title.Parent = frame
 
-task.spawn(function()
-    task.wait(2)
+    local hint = Instance.new("TextLabel")
+    hint.Size = UDim2.new(1, 0, 0, 20)
+    hint.Position = UDim2.new(0, 0, 0, 50)
+    hint.BackgroundTransparency = 1
+    hint.Text = "Enter key below"
+    hint.TextColor3 = Color3.fromRGB(180, 180, 180)
+    hint.TextSize = 14
+    hint.Font = Enum.Font.Gotham
+    hint.Parent = frame
 
-    local MainTab = Window:CreateTab("Main", 4483362458)
-    MainTab:CreateSection("Visuals")
+    local box = Instance.new("TextBox")
+    box.Size = UDim2.new(1, -40, 0, 40)
+    box.Position = UDim2.new(0, 20, 0, 80)
+    box.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+    box.BorderSizePixel = 0
+    box.Text = ""
+    box.PlaceholderText = "Key..."
+    box.TextColor3 = Color3.fromRGB(255, 255, 255)
+    box.TextSize = 16
+    box.Font = Enum.Font.Gotham
+    box.Parent = frame
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 8)
 
-    -- ============================
-    -- SHARED PART LISTS
-    -- ============================
+    local submit = Instance.new("TextButton")
+    submit.Size = UDim2.new(1, -40, 0, 40)
+    submit.Position = UDim2.new(0, 20, 0, 130)
+    submit.BackgroundColor3 = Color3.fromRGB(120, 50, 200)
+    submit.BorderSizePixel = 0
+    submit.Text = "Submit"
+    submit.TextColor3 = Color3.fromRGB(255, 255, 255)
+    submit.TextSize = 16
+    submit.Font = Enum.Font.GothamBold
+    submit.Parent = frame
+    Instance.new("UICorner", submit).CornerRadius = UDim.new(0, 8)
 
-    local VESC_Destroy = {
-        ["Cylinder.002"] = true,
-        ["Screen"]       = true,
-        ["screen"]       = true,
-        ["Plane.018"]    = true,
-        ["Plane.019"]    = true,
-        ["Plane.004"]    = true,
-        ["Sticker"]      = true,
-        ["Stickers"]     = true,
-    }
-
-    local ACCENT_PARTS = {
-        ["FrontSuspension"]  = true,
-        ["BackSuspension"]   = true,
-        ["Plane.001"]        = true,
-        ["Plane.005"]        = true,
-        ["Plane.007"]        = true,
-        ["Cylinder.004"]     = true,
-        ["Cylinder.006"]     = true,
-        ["Cylinder.007"]     = true,
-        ["imagetostl_mesh1"] = true,
-        ["2"]                = true,
-        ["2.001"]            = true,
-    }
-
-    local BODY_PARTS = {
-        ["Untitled"] = true,
-        ["Box106"]   = true,
-        ["Plane.002"] = true,
-        ["Plane.012"] = true,
-    }
-
-    -- ============================
-    -- RAINBOW SYSTEM
-    -- ============================
-
-    local RainbowParts = {}
-    local RainbowConnection = nil
-
-    local function StartRainbowLoop()
-        if RainbowConnection then return end
-        RainbowConnection = RunService.RenderStepped:Connect(function()
-            local hue = (tick() * 0.3) % 1
-            for part in pairs(RainbowParts) do
-                if part and part.Parent then
-                    local c = Color3.fromHSV(hue, 1, 1)
-                    pcall(function()
-                        part.Color = c
-                        part.BrickColor = BrickColor.new(c)
-                    end)
-                end
+    local submitted = false
+    submit.MouseButton1Click:Connect(function()
+        if box.Text == KEY then
+            submitted = true
+            if writefile then
+                pcall(function() writefile(KEY_FILE, KEY) end)
             end
-        end)
-    end
-
-    local function StopRainbowLoop()
-        if RainbowConnection then
-            RainbowConnection:Disconnect()
-            RainbowConnection = nil
-        end
-    end
-
-    local function AddRainbowPart(part, owner)
-        if not part:IsA("BasePart") then return end
-        if RainbowParts[part] then return end
-        RainbowParts[part] = { Original = part.Color, Owner = owner }
-        StartRainbowLoop()
-    end
-
-    local function RemoveRainbowByOwner(owner)
-        for part, data in pairs(RainbowParts) do
-            if data.Owner == owner then
-                pcall(function()
-                    if part and part.Parent then
-                        part.Color = data.Original
-                    end
-                end)
-                RainbowParts[part] = nil
-            end
-        end
-        if next(RainbowParts) == nil then StopRainbowLoop() end
-    end
-
-    -- ============================
-    -- VESC
-    -- ============================
-
-    local VESC_Connection = nil
-
-    local function VESC_Process(obj)
-        if VESC_Destroy[obj.Name] then
-            pcall(function() obj:Destroy() end)
-        end
-    end
-
-    MainTab:CreateToggle({
-        Name = "VESC",
-        CurrentValue = false,
-        Flag = "VESC",
-        Callback = function(Value)
-            if Value then
-                for _, obj in ipairs(workspace:GetDescendants()) do VESC_Process(obj) end
-                VESC_Connection = workspace.DescendantAdded:Connect(VESC_Process)
-            else
-                if VESC_Connection then VESC_Connection:Disconnect() VESC_Connection = nil end
-            end
-        end
-    })
-
-    -- ============================
-    -- RECOLOR TOGGLE FACTORY
-    -- ============================
-
-    local function MakeRecolorToggle(config)
-        local connection = nil
-        local originals  = {}
-
-        local function getNameColor(obj)
-            if config.BodyOverride and config.BodyOverride[obj.Name] then
-                return config.Body
-            end
-            if config.AccentOverride and config.AccentOverride[obj.Name] then
-                return config.Accent
-            end
-
-            if config.ExactAccent and config.ExactAccent[obj.Name] then
-                return config.Accent
-            end
-            if config.ExactBody and config.ExactBody[obj.Name] then
-                return config.Body
-            end
-
-            if ACCENT_PARTS[obj.Name] then return config.Accent end
-            if BODY_PARTS[obj.Name]   then return config.Body   end
-
-            if config.Patterns then
-                for pattern, kind in pairs(config.Patterns) do
-                    if obj.Name:lower():find(pattern:lower(), 1, true) then
-                        if kind == "accent" then return config.Accent end
-                        if kind == "body"   then return config.Body   end
-                    end
-                end
-            end
-            return nil
-        end
-
-        local function processPart(obj)
-            if not obj:IsA("BasePart") then return end
-            if VESC_Destroy[obj.Name] then
-                pcall(function() obj:Destroy() end)
-                return
-            end
-            local color = getNameColor(obj)
-            if color then
-                if not originals[obj] then
-                    originals[obj] = obj.Color
-                end
-                pcall(function() obj.Color = color end)
-            end
-        end
-
-        MainTab:CreateToggle({
-            Name = config.Name,
-            CurrentValue = false,
-            Flag = config.Flag,
-            Callback = function(Value)
-                if Value then
-                    originals = {}
-                    for _, obj in ipairs(workspace:GetDescendants()) do processPart(obj) end
-                    connection = workspace.DescendantAdded:Connect(processPart)
-                else
-                    if connection then connection:Disconnect() connection = nil end
-                    for part, originalColor in pairs(originals) do
-                        pcall(function()
-                            if part and part.Parent then
-                                part.Color = originalColor
-                            end
-                        end)
-                    end
-                    originals = {}
-                end
-            end
-        })
-    end
-
-    -- ============================
-    -- COLOR TOGGLES
-    -- ============================
-
-    -- Pink Blossom — handlebar pink, grips white
-    MakeRecolorToggle({
-        Name = "Pink Blossom (VESC)",
-        Flag = "PinkBlossom",
-        Accent = Color3.fromHex("FFB7C5"),
-        Body   = Color3.fromRGB(255, 255, 255),
-        BodyOverride = {
-            ["Cylinder.006"] = true,  -- left grip  -> white
-            ["Cylinder.007"] = true,  -- right grip -> white
-        },
-        Patterns = {
-            ["brake"]  = "accent",
-            ["fender"] = "accent",
-        }
-    })
-
-    MakeRecolorToggle({
-        Name = "Cyan Accents (VESC)",
-        Flag = "CyanAccents",
-        Accent = Color3.fromHex("00E5FF"),
-        Body   = Color3.fromRGB(255, 255, 255),
-        BodyOverride = {
-            ["Cylinder.004"] = true,
-            ["Cylinder.006"] = true,
-            ["Cylinder.007"] = true,
-        },
-        Patterns = {
-            ["brake"]  = "accent",
-            ["fender"] = "accent",
-        }
-    })
-
-    MakeRecolorToggle({
-        Name = "Black and White (VESC)",
-        Flag = "BlackAndWhite",
-        Accent = Color3.fromRGB(255, 255, 255),
-        Body   = Color3.fromRGB(27, 42, 53),
-        Patterns = {
-            ["brake"]  = "accent",
-            ["fender"] = "body",
-        }
-    })
-
-    MakeRecolorToggle({
-        Name = "Black and Red (VESC)",
-        Flag = "BlackAndRed",
-        Accent = Color3.fromRGB(255, 0, 0),
-        Body   = Color3.fromRGB(27, 42, 53),
-        Patterns = {
-            ["brake"]  = "accent",
-            ["fender"] = "body",
-        }
-    })
-
-    MakeRecolorToggle({
-        Name = "Blackout (VESC)",
-        Flag = "Blackout",
-        Accent = Color3.fromRGB(27, 42, 53),
-        Body   = Color3.fromRGB(27, 42, 53),
-        Patterns = {
-            ["brake"]  = "accent",
-            ["fender"] = "body",
-        }
-    })
-
-    MakeRecolorToggle({
-        Name = "Black and Purple (VESC)",
-        Flag = "BlackAndPurple",
-        Accent = Color3.fromRGB(98, 37, 209),
-        Body   = Color3.fromRGB(27, 42, 53),
-        Patterns = {
-            ["brake"]  = "accent",
-            ["fender"] = "body",
-        }
-    })
-
-    -- ============================
-    -- RAINBOW SUSPENSION
-    -- ============================
-
-    local RainbowSusp_Connection = nil
-
-    local RAINBOW_SUSP_NAMES = {
-        ["FrontSuspension"] = true,
-        ["BackSuspension"]  = true,
-    }
-
-    local function RainbowSusp_Process(obj)
-        if RAINBOW_SUSP_NAMES[obj.Name] and obj:IsA("BasePart") then
-            AddRainbowPart(obj, "RainbowSuspension")
-        end
-    end
-
-    MainTab:CreateToggle({
-        Name = "Rainbow Suspension",
-        CurrentValue = false,
-        Flag = "RainbowSuspension",
-        Callback = function(Value)
-            if Value then
-                for _, obj in ipairs(workspace:GetDescendants()) do RainbowSusp_Process(obj) end
-                RainbowSusp_Connection = workspace.DescendantAdded:Connect(RainbowSusp_Process)
-            else
-                if RainbowSusp_Connection then
-                    RainbowSusp_Connection:Disconnect()
-                    RainbowSusp_Connection = nil
-                end
-                RemoveRainbowByOwner("RainbowSuspension")
-            end
-        end
-    })
-
-    -- ============================
-    -- RAINBOW WHOLE SCOOTER
-    -- ============================
-
-    local RainbowAll_Connection = nil
-
-    local RAINBOW_ALL_NAMES = {
-        ["FrontSuspension"]   = true,
-        ["BackSuspension"]    = true,
-        ["Plane.001"]         = true,
-        ["Plane.002"]         = true,
-        ["Plane.005"]         = true,
-        ["Plane.007"]         = true,
-        ["Plane.012"]         = true,
-        ["Plane.018"]         = true,
-        ["Plane.019"]         = true,
-        ["Plane.004"]         = true,
-        ["Cylinder.002"]      = true,
-        ["Cylinder.004"]      = true,
-        ["Cylinder.006"]      = true,
-        ["Cylinder.007"]      = true,
-        ["imagetostl_mesh1"]  = true,
-        ["Sticker"]           = true,
-        ["Stickers"]          = true,
-        ["Box106"]            = true,
-        ["Untitled"]          = true,
-        ["2"]                 = true,
-        ["2.001"]             = true,
-    }
-
-    local function RainbowAll_Process(obj)
-        if not obj:IsA("BasePart") then return end
-        if RAINBOW_ALL_NAMES[obj.Name]
-           or obj.Name:lower():find("brake", 1, true)
-           or obj.Name:lower():find("fender", 1, true) then
-            AddRainbowPart(obj, "RainbowAll")
-        end
-    end
-
-    MainTab:CreateToggle({
-        Name = "Rainbow Scooter (All)",
-        CurrentValue = false,
-        Flag = "RainbowAll",
-        Callback = function(Value)
-            if Value then
-                for _, obj in ipairs(workspace:GetDescendants()) do RainbowAll_Process(obj) end
-                RainbowAll_Connection = workspace.DescendantAdded:Connect(RainbowAll_Process)
-            else
-                if RainbowAll_Connection then
-                    RainbowAll_Connection:Disconnect()
-                    RainbowAll_Connection = nil
-                end
-                RemoveRainbowByOwner("RainbowAll")
-            end
-        end
-    })
-
-    -- ============================
-    -- WHEELIE BAR
-    -- ============================
-
-    local WheelieBar_Connection = nil
-    local WheelieBar_Originals  = {}
-    local WHEELIE_TARGET_SIZE     = Vector3.new(1.2, 1.8, 0.9)
-    local WHEELIE_TARGET_ROTATION = Vector3.new(-139.218994140625, -60.93600082397461, -122.98500061035156)
-
-    local function WheelieBar_Apply(box)
-        if not box:IsA("BasePart") then return end
-        if not WheelieBar_Originals[box] then
-            WheelieBar_Originals[box] = { Size = box.Size, CFrame = box.CFrame }
-        end
-        local position = box.Position
-        pcall(function()
-            box.Size = WHEELIE_TARGET_SIZE
-            box.CFrame = CFrame.new(position) * CFrame.Angles(
-                math.rad(WHEELIE_TARGET_ROTATION.X),
-                math.rad(WHEELIE_TARGET_ROTATION.Y),
-                math.rad(WHEELIE_TARGET_ROTATION.Z)
-            )
-        end)
-    end
-
-    local function WheelieBar_Process(obj)
-        if obj.Name == "Box106" then
-            task.wait(0.2)
-            WheelieBar_Apply(obj)
-        end
-    end
-
-    MainTab:CreateToggle({
-        Name = "Wheelie Bar",
-        CurrentValue = false,
-        Flag = "WheelieBar",
-        Callback = function(Value)
-            if Value then
-                WheelieBar_Originals = {}
-                for _, obj in ipairs(workspace:GetDescendants()) do
-                    if obj.Name == "Box106" then WheelieBar_Apply(obj) end
-                end
-                WheelieBar_Connection = workspace.DescendantAdded:Connect(WheelieBar_Process)
-            else
-                if WheelieBar_Connection then
-                    WheelieBar_Connection:Disconnect()
-                    WheelieBar_Connection = nil
-                end
-                for part, original in pairs(WheelieBar_Originals) do
-                    pcall(function()
-                        if part and part.Parent then
-                            part.Size   = original.Size
-                            part.CFrame = original.CFrame
-                        end
-                    end)
-                end
-                WheelieBar_Originals = {}
-            end
-        end
-    })
-
-    -- ============================
-    -- AUTO WHEELIE
-    -- ============================
-
-    local AutoWheelie_Anchored = false
-
-    local function AutoWheelie_SetAnchored(state)
-        AutoWheelie_Anchored = state
-        local character = LocalPlayer.Character
-        if not character then return end
-        local root = character:FindFirstChild("HumanoidRootPart")
-        if root then
-            pcall(function() root.Anchored = state end)
-        end
-    end
-
-    LocalPlayer.CharacterAdded:Connect(function(character)
-        local root = character:WaitForChild("HumanoidRootPart", 5)
-        if root then
-            pcall(function() root.Anchored = AutoWheelie_Anchored end)
+            promptGui:Destroy()
+        else
+            box.Text = ""
+            box.PlaceholderText = "Wrong key, try again"
         end
     end)
 
-    MainTab:CreateToggle({
-        Name = "Auto Wheelie",
-        CurrentValue = false,
-        Flag = "AutoWheelie",
-        Callback = function(Value)
-            AutoWheelie_SetAnchored(Value)
-        end
-    })
-
-    -- ============================
-    -- STRETCHED RESOLUTION
-    -- ============================
-
-    MainTab:CreateSection("Camera")
-
-    local Stretch_Connection = nil
-    local Stretch_Resolution = 0.80
-
-    local function ApplyStretch()
-        local Camera = workspace.CurrentCamera
-        if not Camera then return end
-        Stretch_Connection = RunService.RenderStepped:Connect(function()
-            Camera.CFrame = Camera.CFrame * CFrame.new(
-                0, 0, 0,
-                1, 0, 0,
-                0, Stretch_Resolution, 0,
-                0, 0, 1
-            )
-        end)
+    -- Wait until the correct key is entered
+    while not submitted do
+        task.wait(0.1)
     end
+end
 
-    MainTab:CreateToggle({
-        Name = "Stretched Resolution",
-        CurrentValue = false,
-        Flag = "StretchedRes",
-        Callback = function(Value)
-            if Value then
-                ApplyStretch()
-            else
-                if Stretch_Connection then
-                    Stretch_Connection:Disconnect()
-                    Stretch_Connection = nil
+-- ============================
+-- FLUENT WINDOW
+-- ============================
+
+local Window = Fluent:CreateWindow({
+    Title = "VESC Hub",
+    SubTitle = "by SSUNSS1W (BUNZ TABOR PLAYER)",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Amethyst",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
+
+local Options = Fluent.Options
+
+-- ============================
+-- SHARED PART LISTS
+-- ============================
+
+local VESC_Destroy = {
+    ["Cylinder.002"] = true,
+    ["Screen"]       = true,
+    ["screen"]       = true,
+    ["Plane.018"]    = true,
+    ["Plane.019"]    = true,
+    ["Plane.004"]    = true,
+    ["Sticker"]      = true,
+    ["Stickers"]     = true,
+}
+
+local ACCENT_PARTS = {
+    ["FrontSuspension"]  = true,
+    ["BackSuspension"]   = true,
+    ["Plane.001"]        = true,
+    ["Plane.005"]        = true,
+    ["Plane.007"]        = true,
+    ["Cylinder.004"]     = true,
+    ["Cylinder.006"]     = true,
+    ["Cylinder.007"]     = true,
+    ["imagetostl_mesh1"] = true,
+    ["2"]                = true,
+    ["2.001"]            = true,
+}
+
+local BODY_PARTS = {
+    ["Untitled"]  = true,
+    ["Box106"]    = true,
+    ["Plane.002"] = true,
+    ["Plane.012"] = true,
+}
+
+-- ============================
+-- RAINBOW SYSTEM
+-- ============================
+
+local RainbowParts = {}
+local RainbowConnection = nil
+
+local function StartRainbowLoop()
+    if RainbowConnection then return end
+    RainbowConnection = RunService.RenderStepped:Connect(function()
+        local hue = (tick() * 0.3) % 1
+        for part in pairs(RainbowParts) do
+            if part and part.Parent then
+                local c = Color3.fromHSV(hue, 1, 1)
+                pcall(function()
+                    part.Color = c
+                    part.BrickColor = BrickColor.new(c)
+                end)
+            end
+        end
+    end)
+end
+
+local function StopRainbowLoop()
+    if RainbowConnection then
+        RainbowConnection:Disconnect()
+        RainbowConnection = nil
+    end
+end
+
+local function AddRainbowPart(part, owner)
+    if not part:IsA("BasePart") then return end
+    if RainbowParts[part] then return end
+    RainbowParts[part] = { Original = part.Color, Owner = owner }
+    StartRainbowLoop()
+end
+
+local function RemoveRainbowByOwner(owner)
+    for part, data in pairs(RainbowParts) do
+        if data.Owner == owner then
+            pcall(function()
+                if part and part.Parent then
+                    part.Color = data.Original
+                end
+            end)
+            RainbowParts[part] = nil
+        end
+    end
+    if next(RainbowParts) == nil then StopRainbowLoop() end
+end
+
+-- ============================
+-- VESC
+-- ============================
+
+local VESC_Connection = nil
+
+local function VESC_Process(obj)
+    if VESC_Destroy[obj.Name] then
+        pcall(function() obj:Destroy() end)
+    end
+end
+
+Tabs.Main:AddToggle("VESC", {
+    Title = "VESC",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            for _, obj in ipairs(workspace:GetDescendants()) do VESC_Process(obj) end
+            VESC_Connection = workspace.DescendantAdded:Connect(VESC_Process)
+        else
+            if VESC_Connection then VESC_Connection:Disconnect() VESC_Connection = nil end
+        end
+    end
+})
+
+-- ============================
+-- RECOLOR TOGGLE FACTORY
+-- ============================
+
+local function MakeRecolorToggle(config)
+    local connection = nil
+    local originals  = {}
+
+    local function getNameColor(obj)
+        if config.BodyOverride and config.BodyOverride[obj.Name] then
+            return config.Body
+        end
+        if config.AccentOverride and config.AccentOverride[obj.Name] then
+            return config.Accent
+        end
+        if config.ExactAccent and config.ExactAccent[obj.Name] then
+            return config.Accent
+        end
+        if config.ExactBody and config.ExactBody[obj.Name] then
+            return config.Body
+        end
+        if ACCENT_PARTS[obj.Name] then return config.Accent end
+        if BODY_PARTS[obj.Name]   then return config.Body   end
+        if config.Patterns then
+            for pattern, kind in pairs(config.Patterns) do
+                if obj.Name:lower():find(pattern:lower(), 1, true) then
+                    if kind == "accent" then return config.Accent end
+                    if kind == "body"   then return config.Body   end
                 end
             end
         end
-    })
+        return nil
+    end
 
-    MainTab:CreateSlider({
-        Name = "Stretch Amount",
-        Range = {0.50, 1.00},
-        Increment = 0.01,
-        Suffix = "x",
-        CurrentValue = 0.80,
-        Flag = "StretchAmount",
+    local function processPart(obj)
+        if not obj:IsA("BasePart") then return end
+        if VESC_Destroy[obj.Name] then
+            pcall(function() obj:Destroy() end)
+            return
+        end
+        local color = getNameColor(obj)
+        if color then
+            if not originals[obj] then
+                originals[obj] = obj.Color
+            end
+            pcall(function() obj.Color = color end)
+        end
+    end
+
+    Tabs.Main:AddToggle(config.Flag, {
+        Title = config.Name,
+        Default = false,
         Callback = function(Value)
-            Stretch_Resolution = Value
-            if Stretch_Connection then
-                Stretch_Connection:Disconnect()
-                Stretch_Connection = nil
-                ApplyStretch()
+            if Value then
+                originals = {}
+                for _, obj in ipairs(workspace:GetDescendants()) do processPart(obj) end
+                connection = workspace.DescendantAdded:Connect(processPart)
+            else
+                if connection then connection:Disconnect() connection = nil end
+                for part, originalColor in pairs(originals) do
+                    pcall(function()
+                        if part and part.Parent then
+                            part.Color = originalColor
+                        end
+                    end)
+                end
+                originals = {}
             end
         end
     })
+end
+
+-- ============================
+-- COLOR TOGGLES
+-- ============================
+
+MakeRecolorToggle({
+    Name = "Pink Blossom (VESC)",
+    Flag = "PinkBlossom",
+    Accent = Color3.fromHex("FFB7C5"),
+    Body   = Color3.fromRGB(255, 255, 255),
+    BodyOverride = {
+        ["Cylinder.006"] = true,
+        ["Cylinder.007"] = true,
+    },
+    Patterns = {
+        ["brake"]  = "accent",
+        ["fender"] = "accent",
+    }
+})
+
+MakeRecolorToggle({
+    Name = "Cyan Accents (VESC)",
+    Flag = "CyanAccents",
+    Accent = Color3.fromHex("00E5FF"),
+    Body   = Color3.fromRGB(255, 255, 255),
+    BodyOverride = {
+        ["Cylinder.004"] = true,
+        ["Cylinder.006"] = true,
+        ["Cylinder.007"] = true,
+    },
+    Patterns = {
+        ["brake"]  = "accent",
+        ["fender"] = "accent",
+    }
+})
+
+MakeRecolorToggle({
+    Name = "Black and White (VESC)",
+    Flag = "BlackAndWhite",
+    Accent = Color3.fromRGB(255, 255, 255),
+    Body   = Color3.fromRGB(27, 42, 53),
+    Patterns = {
+        ["brake"]  = "accent",
+        ["fender"] = "body",
+    }
+})
+
+MakeRecolorToggle({
+    Name = "Black and Red (VESC)",
+    Flag = "BlackAndRed",
+    Accent = Color3.fromRGB(255, 0, 0),
+    Body   = Color3.fromRGB(27, 42, 53),
+    Patterns = {
+        ["brake"]  = "accent",
+        ["fender"] = "body",
+    }
+})
+
+MakeRecolorToggle({
+    Name = "Blackout (VESC)",
+    Flag = "Blackout",
+    Accent = Color3.fromRGB(27, 42, 53),
+    Body   = Color3.fromRGB(27, 42, 53),
+    Patterns = {
+        ["brake"]  = "accent",
+        ["fender"] = "body",
+    }
+})
+
+MakeRecolorToggle({
+    Name = "Black and Purple (VESC)",
+    Flag = "BlackAndPurple",
+    Accent = Color3.fromRGB(98, 37, 209),
+    Body   = Color3.fromRGB(27, 42, 53),
+    Patterns = {
+        ["brake"]  = "accent",
+        ["fender"] = "body",
+    }
+})
+
+-- ============================
+-- RAINBOW SUSPENSION
+-- ============================
+
+local RainbowSusp_Connection = nil
+
+local RAINBOW_SUSP_NAMES = {
+    ["FrontSuspension"] = true,
+    ["BackSuspension"]  = true,
+}
+
+local function RainbowSusp_Process(obj)
+    if RAINBOW_SUSP_NAMES[obj.Name] and obj:IsA("BasePart") then
+        AddRainbowPart(obj, "RainbowSuspension")
+    end
+end
+
+Tabs.Main:AddToggle("RainbowSuspension", {
+    Title = "Rainbow Suspension",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            for _, obj in ipairs(workspace:GetDescendants()) do RainbowSusp_Process(obj) end
+            RainbowSusp_Connection = workspace.DescendantAdded:Connect(RainbowSusp_Process)
+        else
+            if RainbowSusp_Connection then
+                RainbowSusp_Connection:Disconnect()
+                RainbowSusp_Connection = nil
+            end
+            RemoveRainbowByOwner("RainbowSuspension")
+        end
+    end
+})
+
+-- ============================
+-- RAINBOW WHOLE SCOOTER
+-- ============================
+
+local RainbowAll_Connection = nil
+
+local RAINBOW_ALL_NAMES = {
+    ["FrontSuspension"]   = true,
+    ["BackSuspension"]    = true,
+    ["Plane.001"]         = true,
+    ["Plane.002"]         = true,
+    ["Plane.005"]         = true,
+    ["Plane.007"]         = true,
+    ["Plane.012"]         = true,
+    ["Plane.018"]         = true,
+    ["Plane.019"]         = true,
+    ["Plane.004"]         = true,
+    ["Cylinder.002"]      = true,
+    ["Cylinder.004"]      = true,
+    ["Cylinder.006"]      = true,
+    ["Cylinder.007"]      = true,
+    ["imagetostl_mesh1"]  = true,
+    ["Sticker"]           = true,
+    ["Stickers"]          = true,
+    ["Box106"]            = true,
+    ["Untitled"]          = true,
+    ["2"]                 = true,
+    ["2.001"]             = true,
+}
+
+local function RainbowAll_Process(obj)
+    if not obj:IsA("BasePart") then return end
+    if RAINBOW_ALL_NAMES[obj.Name]
+       or obj.Name:lower():find("brake", 1, true)
+       or obj.Name:lower():find("fender", 1, true) then
+        AddRainbowPart(obj, "RainbowAll")
+    end
+end
+
+Tabs.Main:AddToggle("RainbowAll", {
+    Title = "Rainbow Scooter (All)",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            for _, obj in ipairs(workspace:GetDescendants()) do RainbowAll_Process(obj) end
+            RainbowAll_Connection = workspace.DescendantAdded:Connect(RainbowAll_Process)
+        else
+            if RainbowAll_Connection then
+                RainbowAll_Connection:Disconnect()
+                RainbowAll_Connection = nil
+            end
+            RemoveRainbowByOwner("RainbowAll")
+        end
+    end
+})
+
+-- ============================
+-- WHEELIE BAR
+-- ============================
+
+local WheelieBar_Connection = nil
+local WheelieBar_Originals  = {}
+local WHEELIE_TARGET_SIZE     = Vector3.new(1.2, 1.8, 0.9)
+local WHEELIE_TARGET_ROTATION = Vector3.new(-139.218994140625, -60.93600082397461, -122.98500061035156)
+
+local function WheelieBar_Apply(box)
+    if not box:IsA("BasePart") then return end
+    if not WheelieBar_Originals[box] then
+        WheelieBar_Originals[box] = { Size = box.Size, CFrame = box.CFrame }
+    end
+    local position = box.Position
+    pcall(function()
+        box.Size = WHEELIE_TARGET_SIZE
+        box.CFrame = CFrame.new(position) * CFrame.Angles(
+            math.rad(WHEELIE_TARGET_ROTATION.X),
+            math.rad(WHEELIE_TARGET_ROTATION.Y),
+            math.rad(WHEELIE_TARGET_ROTATION.Z)
+        )
+    end)
+end
+
+local function WheelieBar_Process(obj)
+    if obj.Name == "Box106" then
+        task.wait(0.2)
+        WheelieBar_Apply(obj)
+    end
+end
+
+Tabs.Main:AddToggle("WheelieBar", {
+    Title = "Wheelie Bar",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            WheelieBar_Originals = {}
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj.Name == "Box106" then WheelieBar_Apply(obj) end
+            end
+            WheelieBar_Connection = workspace.DescendantAdded:Connect(WheelieBar_Process)
+        else
+            if WheelieBar_Connection then
+                WheelieBar_Connection:Disconnect()
+                WheelieBar_Connection = nil
+            end
+            for part, original in pairs(WheelieBar_Originals) do
+                pcall(function()
+                    if part and part.Parent then
+                        part.Size   = original.Size
+                        part.CFrame = original.CFrame
+                    end
+                end)
+            end
+            WheelieBar_Originals = {}
+        end
+    end
+})
+
+-- ============================
+-- AUTO WHEELIE
+-- ============================
+
+local AutoWheelie_Anchored = false
+
+local function AutoWheelie_SetAnchored(state)
+    AutoWheelie_Anchored = state
+    local character = LocalPlayer.Character
+    if not character then return end
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if root then
+        pcall(function() root.Anchored = state end)
+    end
+end
+
+LocalPlayer.CharacterAdded:Connect(function(character)
+    local root = character:WaitForChild("HumanoidRootPart", 5)
+    if root then
+        pcall(function() root.Anchored = AutoWheelie_Anchored end)
+    end
 end)
+
+Tabs.Main:AddToggle("AutoWheelie", {
+    Title = "Auto Wheelie",
+    Default = false,
+    Callback = function(Value)
+        AutoWheelie_SetAnchored(Value)
+    end
+})
+
+-- ============================
+-- STRETCHED RESOLUTION
+-- ============================
+
+Tabs.Main:AddSection("Camera")
+
+local Stretch_Connection = nil
+local Stretch_Resolution = 0.80
+
+local function ApplyStretch()
+    local Camera = workspace.CurrentCamera
+    if not Camera then return end
+    Stretch_Connection = RunService.RenderStepped:Connect(function()
+        Camera.CFrame = Camera.CFrame * CFrame.new(
+            0, 0, 0,
+            1, 0, 0,
+            0, Stretch_Resolution, 0,
+            0, 0, 1
+        )
+    end)
+end
+
+Tabs.Main:AddToggle("StretchedRes", {
+    Title = "Stretched Resolution",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            ApplyStretch()
+        else
+            if Stretch_Connection then
+                Stretch_Connection:Disconnect()
+                Stretch_Connection = nil
+            end
+        end
+    end
+})
+
+Tabs.Main:AddSlider("StretchAmount", {
+    Title = "Stretch Amount",
+    Default = 0.80,
+    Min = 0.50,
+    Max = 1.00,
+    Rounding = 2,
+    Callback = function(Value)
+        Stretch_Resolution = Value
+        if Stretch_Connection then
+            Stretch_Connection:Disconnect()
+            Stretch_Connection = nil
+            ApplyStretch()
+        end
+    end
+})
+
+-- ============================
+-- SAVE / INTERFACE MANAGERS
+-- ============================
+
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+
+InterfaceManager:SetFolder("VESCHub")
+SaveManager:SetFolder("VESCHub/Configs")
+
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+Window:SelectTab(1)
+
+SaveManager:LoadAutoloadConfig()
