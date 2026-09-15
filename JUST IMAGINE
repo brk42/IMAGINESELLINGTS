@@ -377,43 +377,42 @@ task.spawn(function()
     })
 
     -- ============================
-    -- RAINBOW WHOLE SCOOTER (EVERY PART)
+    -- RAINBOW WHOLE SCOOTER
     -- ============================
 
     local RainbowAll_Connection = nil
-    local RainbowAll_Tracked = {}
 
-    local function IsOwnScooterPart(obj)
-        local char = LocalPlayer.Character
-        if not char then return false end
-
-        if obj:IsDescendantOf(char) then return true end
-
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        if humanoid and humanoid.SeatPart then
-            local seatModel = humanoid.SeatPart:FindFirstAncestorOfClass("Model")
-            if seatModel and obj:IsDescendantOf(seatModel) then
-                return true
-            end
-        end
-
-        local top = obj
-        while top.Parent and top.Parent ~= workspace do
-            top = top.Parent
-        end
-        if top == char then return true end
-
-        return false
-    end
+    local RAINBOW_ALL_NAMES = {
+        ["FrontSuspension"]   = true,
+        ["BackSuspension"]    = true,
+        ["Plane.001"]         = true,
+        ["Plane.002"]         = true,
+        ["Plane.005"]         = true,
+        ["Plane.007"]         = true,
+        ["Plane.012"]         = true,
+        ["Plane.018"]         = true,
+        ["Plane.019"]         = true,
+        ["Plane.004"]         = true,
+        ["Cylinder.002"]      = true,
+        ["Cylinder.004"]      = true,
+        ["Cylinder.006"]      = true,
+        ["Cylinder.007"]      = true,
+        ["imagetostl_mesh1"]  = true,
+        ["Sticker"]           = true,
+        ["Stickers"]          = true,
+        ["Box106"]            = true,
+        ["Untitled"]          = true,
+        ["2"]                 = true,
+        ["2.001"]             = true,
+    }
 
     local function RainbowAll_Process(obj)
         if not obj:IsA("BasePart") then return end
-        if RainbowAll_Tracked[obj] then return end
-        if not IsOwnScooterPart(obj) then return end
-        if obj.Name:lower():find("wheel", 1, true) then return end
-
-        RainbowAll_Tracked[obj] = true
-        AddRainbowPart(obj, "RainbowAll")
+        if RAINBOW_ALL_NAMES[obj.Name]
+           or obj.Name:lower():find("brake", 1, true)
+           or obj.Name:lower():find("fender", 1, true) then
+            AddRainbowPart(obj, "RainbowAll")
+        end
     end
 
     MainTab:CreateToggle({
@@ -422,17 +421,13 @@ task.spawn(function()
         Flag = "RainbowAll",
         Callback = function(Value)
             if Value then
-                RainbowAll_Tracked = {}
-                for _, obj in ipairs(workspace:GetDescendants()) do
-                    RainbowAll_Process(obj)
-                end
+                for _, obj in ipairs(workspace:GetDescendants()) do RainbowAll_Process(obj) end
                 RainbowAll_Connection = workspace.DescendantAdded:Connect(RainbowAll_Process)
             else
                 if RainbowAll_Connection then
                     RainbowAll_Connection:Disconnect()
                     RainbowAll_Connection = nil
                 end
-                RainbowAll_Tracked = {}
                 RemoveRainbowByOwner("RainbowAll")
             end
         end
