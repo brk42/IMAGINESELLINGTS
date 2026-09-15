@@ -274,14 +274,17 @@ task.spawn(function()
         }
     })
 
+    -- ============================
+    -- PINK BLOSSOM (stem = pink)
+    -- ============================
     MakeRecolorToggle({
         Name = "Pink Blossom (VESC)",
         Flag = "PinkBlossom",
         ColorMap = {
             ["FrontSuspension"] = Color3.fromHex("FFB7C5"),
             ["BackSuspension"]  = Color3.fromHex("FFB7C5"),
+            ["Plane.001"]       = Color3.fromHex("FFB7C5"),
             ["Plane.002"]       = Color3.fromRGB(255, 255, 255),
-            ["Plane.001"]       = Color3.fromRGB(255, 255, 255),
             ["Plane.012"]       = Color3.fromRGB(255, 255, 255),
         },
         Patterns = {
@@ -290,14 +293,17 @@ task.spawn(function()
         }
     })
 
+    -- ============================
+    -- CYAN ACCENTS (stem = cyan)
+    -- ============================
     MakeRecolorToggle({
         Name = "Cyan Accents (VESC)",
         Flag = "CyanAccents",
         ColorMap = {
             ["FrontSuspension"] = Color3.fromHex("00E5FF"),
             ["BackSuspension"]  = Color3.fromHex("00E5FF"),
+            ["Plane.001"]       = Color3.fromHex("00E5FF"),
             ["Plane.002"]       = Color3.fromRGB(255, 255, 255),
-            ["Plane.001"]       = Color3.fromRGB(255, 255, 255),
             ["Plane.012"]       = Color3.fromRGB(255, 255, 255),
         },
         Patterns = {
