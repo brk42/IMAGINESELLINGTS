@@ -15,7 +15,7 @@ local Workspace = game:GetService("Workspace")
 -- KEY SYSTEM
 -- ============================
 
-local KEY = "IMNOTMAKINGYOUPAY"
+local KEY = "ADMIN"
 local KEY_FILE = "VESCKey.txt"
 
 local function hasValidKey()
