@@ -110,7 +110,7 @@ end
 
 local Window = Fluent:CreateWindow({
     Title = "VESC Hub",
-    SubTitle = "by SSUNSS1W",
+    SubTitle = "by SSUNSS1W (BUNZ TABOR PLAYER)",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = true,
@@ -138,6 +138,16 @@ local VESC_Destroy = {
     ["Plane.004"]    = true,
     ["Sticker"]      = true,
     ["Stickers"]     = true,
+}
+
+-- Blossom's own destroy list — no Sticker/Stickers
+local BLOSSOM_Destroy = {
+    ["Cylinder.002"] = true,
+    ["Screen"]       = true,
+    ["screen"]       = true,
+    ["Plane.018"]    = true,
+    ["Plane.019"]    = true,
+    ["Plane.004"]    = true,
 }
 
 local ACCENT_PARTS = {
@@ -245,6 +255,9 @@ local function MakeRecolorToggle(config)
     local connection = nil
     local originals  = {}
 
+    -- Use config.DestroyList if provided, else fall back to VESC_Destroy
+    local destroyList = config.DestroyList or VESC_Destroy
+
     local function getNameColor(obj)
         if config.BodyOverride and config.BodyOverride[obj.Name] then
             return config.Body
@@ -273,7 +286,7 @@ local function MakeRecolorToggle(config)
 
     local function processPart(obj)
         if not obj:IsA("BasePart") then return end
-        if VESC_Destroy[obj.Name] then
+        if destroyList[obj.Name] then
             pcall(function() obj:Destroy() end)
             return
         end
@@ -316,6 +329,7 @@ end
 MakeRecolorToggle({
     Name = "Pink Blossom (VESC)",
     Flag = "PinkBlossom",
+    DestroyList = BLOSSOM_Destroy,      -- ← use the blossom-specific destroy list
     Accent = Color3.fromHex("FFB7C5"),
     Body   = Color3.fromRGB(255, 255, 255),
     BodyOverride = {
