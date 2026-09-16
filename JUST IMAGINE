@@ -868,6 +868,7 @@ local BACK_FENDER_NAMES = {
     ["Object002.009"]    = true,
     ["TailLight"]        = true,
     ["Plane1211.002"]    = true,
+    ["Circle2041.002"]   = true,
 }
 
 local function BackFender_Process(obj)
@@ -984,7 +985,8 @@ Tabs.Main:AddToggle("WheelieBar", {
                 end)
             end
             WheelieBar_Originals = {}
-        end    end
+        end
+    end
 })
 
 -- ============================
