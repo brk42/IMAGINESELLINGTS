@@ -140,16 +140,6 @@ local VESC_Destroy = {
     ["Stickers"]     = true,
 }
 
--- Blossom's own destroy list — no Sticker/Stickers
-local BLOSSOM_Destroy = {
-    ["Cylinder.002"] = true,
-    ["Screen"]       = true,
-    ["screen"]       = true,
-    ["Plane.018"]    = true,
-    ["Plane.019"]    = true,
-    ["Plane.004"]    = true,
-}
-
 local ACCENT_PARTS = {
     ["FrontSuspension"]  = true,
     ["BackSuspension"]   = true,
@@ -255,9 +245,6 @@ local function MakeRecolorToggle(config)
     local connection = nil
     local originals  = {}
 
-    -- Use config.DestroyList if provided, else fall back to VESC_Destroy
-    local destroyList = config.DestroyList or VESC_Destroy
-
     local function getNameColor(obj)
         if config.BodyOverride and config.BodyOverride[obj.Name] then
             return config.Body
@@ -286,7 +273,7 @@ local function MakeRecolorToggle(config)
 
     local function processPart(obj)
         if not obj:IsA("BasePart") then return end
-        if destroyList[obj.Name] then
+        if VESC_Destroy[obj.Name] then
             pcall(function() obj:Destroy() end)
             return
         end
@@ -329,12 +316,24 @@ end
 MakeRecolorToggle({
     Name = "Pink Blossom (VESC)",
     Flag = "PinkBlossom",
-    DestroyList = BLOSSOM_Destroy,      -- ← use the blossom-specific destroy list
     Accent = Color3.fromHex("FFB7C5"),
     Body   = Color3.fromRGB(255, 255, 255),
     BodyOverride = {
         ["Cylinder.006"] = true,
         ["Cylinder.007"] = true,
+    },
+    ExactBody = {
+        ["2"]       = true, ["2.001"]   = true,
+        ["4"]       = true, ["4.001"]   = true, ["4.002"] = true, ["4.003"] = true,
+        ["6"]       = true, ["6.001"]   = true,
+        ["7"]       = true, ["7.001"]   = true,
+        ["8"]       = true, ["8.001"]   = true,
+        ["9"]       = true, ["9.001"]   = true,
+        ["10"]      = true, ["10.001"]  = true,
+        ["11"]      = true, ["11.001"]  = true,
+        ["12"]      = true, ["12.001"]  = true,
+        ["14"]      = true, ["14.001"]  = true,
+        ["Plane.006"] = true,
     },
     Patterns = {
         ["brake"]  = "accent",
@@ -812,6 +811,7 @@ local RAINBOW_ALL_NAMES = {
     ["Plane.001"]         = true,
     ["Plane.002"]         = true,
     ["Plane.005"]         = true,
+    ["Plane.006"]         = true,
     ["Plane.007"]         = true,
     ["Plane.012"]         = true,
     ["Plane.018"]         = true,
@@ -864,8 +864,10 @@ local BackFender_Connection = nil
 
 local BACK_FENDER_NAMES = {
     ["VisualBackFender"] = true,
+    ["BackFender"]       = true,
     ["Object002.009"]    = true,
     ["TailLight"]        = true,
+    ["Plane1211.002"]    = true,
 }
 
 local function BackFender_Process(obj)
@@ -887,6 +889,40 @@ Tabs.Main:AddToggle("RemoveBackFender", {
             if BackFender_Connection then
                 BackFender_Connection:Disconnect()
                 BackFender_Connection = nil
+            end
+        end
+    end
+})
+
+-- ============================
+-- REMOVE FRONT WHEEL BRAKE
+-- ============================
+
+local FrontBrake_Connection = nil
+
+local FRONT_BRAKE_NAMES = {
+    ["Object002.001"] = true,
+}
+
+local function FrontBrake_Process(obj)
+    if FRONT_BRAKE_NAMES[obj.Name] then
+        pcall(function() obj:Destroy() end)
+    end
+end
+
+Tabs.Main:AddToggle("RemoveFrontBrake", {
+    Title = "Remove Front Wheel Brake",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                FrontBrake_Process(obj)
+            end
+            FrontBrake_Connection = workspace.DescendantAdded:Connect(FrontBrake_Process)
+        else
+            if FrontBrake_Connection then
+                FrontBrake_Connection:Disconnect()
+                FrontBrake_Connection = nil
             end
         end
     end
@@ -948,8 +984,7 @@ Tabs.Main:AddToggle("WheelieBar", {
                 end)
             end
             WheelieBar_Originals = {}
-        end
-    end
+        end    end
 })
 
 -- ============================
