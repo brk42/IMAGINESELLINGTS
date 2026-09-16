@@ -673,20 +673,20 @@ local function EnableUnderglowAttribute(scooter)
 end
 
 local function ApplyUnderglow()
-    if not MyScooter then return end
+    if not MyScooter or not Underglow_Enabled then return end
 
     for _, obj in ipairs(MyScooter:GetDescendants()) do
         if obj:IsA("BasePart") and (obj.Name == "Underglow" or obj.Name == "UnderglowPool") then
             for _, c in ipairs(obj:GetDescendants()) do
                 if c:IsA("Light") then
-                    c.Enabled = Underglow_Enabled
-                    if Underglow_Enabled then c.Color = Underglow_Color end
+                    c.Enabled = true
+                    c.Color = Underglow_Color
                 elseif c:IsA("ImageLabel") then
-                    c.Visible = Underglow_Enabled
-                    if Underglow_Enabled then c.ImageColor3 = Underglow_Color end
+                    c.Visible = true
+                    c.ImageColor3 = Underglow_Color
                 end
             end
-            if Underglow_Enabled then obj.Color = Underglow_Color end
+            obj.Color = Underglow_Color
         end
     end
 
@@ -695,14 +695,14 @@ local function ApplyUnderglow()
             if obj:IsA("BasePart") and (obj.Name == "Underglow" or obj.Name == "UnderglowPool") then
                 for _, c in ipairs(obj:GetDescendants()) do
                     if c:IsA("Light") then
-                        c.Enabled = Underglow_Enabled
-                        if Underglow_Enabled then c.Color = Underglow_Color end
+                        c.Enabled = true
+                        c.Color = Underglow_Color
                     elseif c:IsA("ImageLabel") then
-                        c.Visible = Underglow_Enabled
-                        if Underglow_Enabled then c.ImageColor3 = Underglow_Color end
+                        c.Visible = true
+                        c.ImageColor3 = Underglow_Color
                     end
                 end
-                if Underglow_Enabled then obj.Color = Underglow_Color end
+                obj.Color = Underglow_Color
             end
         end
     end
@@ -712,7 +712,7 @@ task.spawn(function()
     while true do
         task.wait(0.5)
         MyScooter = FindMyScooter()
-        if MyScooter then
+        if MyScooter and Underglow_Enabled then
             EnableUnderglowAttribute(MyScooter)
         end
     end
@@ -869,6 +869,7 @@ local BACK_FENDER_NAMES = {
     ["TailLight"]        = true,
     ["Plane1211.002"]    = true,
     ["Circle2041.002"]   = true,
+    ["Circle2071.002"]   = true,
 }
 
 local function BackFender_Process(obj)
