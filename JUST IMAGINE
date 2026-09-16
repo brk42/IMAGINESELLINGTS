@@ -1,8 +1,8 @@
 -- ============================
--- FLUENT LOADER
+-- FLUENT (MODDED) LOADER
 -- ============================
 
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Fluent = loadstring(game:HttpGet("https://github.com/StyearX/Fluent-modded/releases/download/1.6.0/main-fix.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
@@ -10,12 +10,13 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
 
 -- ============================
 -- KEY SYSTEM
 -- ============================
 
-local KEY = "ADMIN"
+local KEY = "ADMINRIZZ"
 local KEY_FILE = "VESCKey.txt"
 
 local function hasValidKey()
@@ -114,7 +115,7 @@ local Window = Fluent:CreateWindow({
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = true,
-    Theme = "Amethyst",
+    Theme = "Blood Red",
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
@@ -126,7 +127,28 @@ local Tabs = {
 local Options = Fluent.Options
 
 -- ============================
--- SHARED PART LISTS
+-- THEMES
+-- ============================
+
+local THEMES = {
+    "Dark", "Darker", "Light", "Blood Red",
+    "Neon", "Amethyst", "Ocean", "Midnight", "Sapphire",
+    "Rose", "Arctic Frost", "Cotton Candy", "Gold",
+}
+
+Tabs.Settings:AddDropdown("ThemeSelector", {
+    Title = "Theme",
+    Description = "Changes the UI color scheme",
+    Values = THEMES,
+    Default = "Blood Red",
+    Multi = false,
+    Callback = function(Value)
+        pcall(function() Fluent:SetTheme(Value) end)
+    end
+})
+
+-- ============================
+-- MASTER PART LISTS
 -- ============================
 
 local VESC_Destroy = {
@@ -140,25 +162,29 @@ local VESC_Destroy = {
     ["Stickers"]     = true,
 }
 
-local ACCENT_PARTS = {
-    ["FrontSuspension"]  = true,
-    ["BackSuspension"]   = true,
-    ["Plane.001"]        = true,
-    ["Plane.005"]        = true,
-    ["Plane.007"]        = true,
-    ["Cylinder.004"]     = true,
-    ["Cylinder.006"]     = true,
-    ["Cylinder.007"]     = true,
-    ["imagetostl_mesh1"] = true,
-    ["2"]                = true,
-    ["2.001"]            = true,
-}
-
-local BODY_PARTS = {
-    ["Untitled"]  = true,
-    ["Box106"]    = true,
-    ["Plane.002"] = true,
-    ["Plane.012"] = true,
+local ROLES = {
+    ["FrontSuspension"]  = "suspension",
+    ["BackSuspension"]   = "suspension",
+    ["Plane.001"]        = "suspension",
+    ["Plane.007"]        = "suspension",
+    ["Box106"]           = "footrest",
+    ["Plane.002"]        = "deck",
+    ["Plane.012"]        = "deck",
+    ["Untitled"]         = "deck",
+    ["Cylinder.003"]     = "cables",
+    ["Cylinder.004"]     = "bars",
+    ["Cylinder.006"]     = "grips",
+    ["Cylinder.007"]     = "grips",
+    ["Object002.003"]    = "brakes",
+    ["_______ ____4"]    = "brakes",
+    ["_______ ____4.002"]= "brakes",
+    ["_______ ____11"]   = "brakes",
+    ["_______ ____11.001"]= "brakes",
+    ["_______ ____2"]    = "brakes",
+    ["_______ ____2.001"]= "brakes",
+    ["Plane.005"]        = "stem",
+    ["Plane.006"]        = "stem",
+    ["imagetostl_mesh1"] = "stem",
 }
 
 -- ============================
@@ -172,13 +198,10 @@ local function StartRainbowLoop()
     if RainbowConnection then return end
     RainbowConnection = RunService.RenderStepped:Connect(function()
         local hue = (tick() * 0.3) % 1
+        local c = Color3.fromHSV(hue, 1, 1)
         for part in pairs(RainbowParts) do
             if part and part.Parent then
-                local c = Color3.fromHSV(hue, 1, 1)
-                pcall(function()
-                    part.Color = c
-                    part.BrickColor = BrickColor.new(c)
-                end)
+                pcall(function() part.Color = c end)
             end
         end
     end)
@@ -213,7 +236,7 @@ local function RemoveRainbowByOwner(owner)
 end
 
 -- ============================
--- VESC
+-- VESC TOGGLE
 -- ============================
 
 local VESC_Connection = nil
@@ -245,29 +268,15 @@ local function MakeRecolorToggle(config)
     local connection = nil
     local originals  = {}
 
-    local function getNameColor(obj)
-        if config.BodyOverride and config.BodyOverride[obj.Name] then
-            return config.Body
-        end
-        if config.AccentOverride and config.AccentOverride[obj.Name] then
-            return config.Accent
-        end
-        if config.ExactAccent and config.ExactAccent[obj.Name] then
-            return config.Accent
-        end
-        if config.ExactBody and config.ExactBody[obj.Name] then
-            return config.Body
-        end
-        if ACCENT_PARTS[obj.Name] then return config.Accent end
-        if BODY_PARTS[obj.Name]   then return config.Body   end
-        if config.Patterns then
-            for pattern, kind in pairs(config.Patterns) do
-                if obj.Name:lower():find(pattern:lower(), 1, true) then
-                    if kind == "accent" then return config.Accent end
-                    if kind == "body"   then return config.Body   end
-                end
-            end
-        end
+    local function resolveColor(role)
+        if role == "suspension" then return config.Suspension end
+        if role == "footrest"   then return config.Footrest   end
+        if role == "deck"       then return config.Deck       end
+        if role == "cables"     then return config.Cables     end
+        if role == "bars"       then return config.Bars       end
+        if role == "grips"      then return config.Grips      end
+        if role == "brakes"     then return config.Brakes     end
+        if role == "stem"       then return config.Stem       end
         return nil
     end
 
@@ -277,13 +286,12 @@ local function MakeRecolorToggle(config)
             pcall(function() obj:Destroy() end)
             return
         end
-        local color = getNameColor(obj)
-        if color then
-            if not originals[obj] then
-                originals[obj] = obj.Color
-            end
-            pcall(function() obj.Color = color end)
-        end
+        local role = ROLES[obj.Name]
+        if not role then return end
+        local color = resolveColor(role)
+        if not color then return end
+        if not originals[obj] then originals[obj] = obj.Color end
+        pcall(function() obj.Color = color end)
     end
 
     Tabs.Main:AddToggle(config.Flag, {
@@ -298,9 +306,7 @@ local function MakeRecolorToggle(config)
                 if connection then connection:Disconnect() connection = nil end
                 for part, originalColor in pairs(originals) do
                     pcall(function()
-                        if part and part.Parent then
-                            part.Color = originalColor
-                        end
+                        if part and part.Parent then part.Color = originalColor end
                     end)
                 end
                 originals = {}
@@ -316,115 +322,109 @@ end
 MakeRecolorToggle({
     Name = "Pink Blossom (VESC)",
     Flag = "PinkBlossom",
-    Accent = Color3.fromHex("FFB7C5"),
-    Body   = Color3.fromRGB(255, 255, 255),
-    BodyOverride = {
-        ["Cylinder.006"] = true,
-        ["Cylinder.007"] = true,
-    },
-    ExactBody = {
-        ["2"]       = true, ["2.001"]   = true,
-        ["4"]       = true, ["4.001"]   = true, ["4.002"] = true, ["4.003"] = true,
-        ["6"]       = true, ["6.001"]   = true,
-        ["7"]       = true, ["7.001"]   = true,
-        ["8"]       = true, ["8.001"]   = true,
-        ["9"]       = true, ["9.001"]   = true,
-        ["10"]      = true, ["10.001"]  = true,
-        ["11"]      = true, ["11.001"]  = true,
-        ["12"]      = true, ["12.001"]  = true,
-        ["14"]      = true, ["14.001"]  = true,
-        ["Plane.006"] = true,
-    },
-    Patterns = {
-        ["brake"]  = "accent",
-        ["fender"] = "accent",
-    }
+    Suspension = Color3.fromHex("FFB7C5"),
+    Footrest   = Color3.fromRGB(255, 255, 255),
+    Deck       = Color3.fromRGB(255, 255, 255),
+    Cables     = Color3.fromHex("FFB7C5"),
+    Bars       = Color3.fromRGB(255, 255, 255),
+    Grips      = Color3.fromRGB(255, 255, 255),
+    Brakes     = Color3.fromHex("FFB7C5"),
+    Stem       = Color3.fromRGB(255, 255, 255),
 })
 
 MakeRecolorToggle({
     Name = "Cyan Accents (VESC)",
     Flag = "CyanAccents",
-    Accent = Color3.fromHex("00E5FF"),
-    Body   = Color3.fromRGB(255, 255, 255),
-    BodyOverride = {
-        ["Cylinder.004"] = true,
-        ["Cylinder.006"] = true,
-        ["Cylinder.007"] = true,
-    },
-    Patterns = {
-        ["brake"]  = "accent",
-        ["fender"] = "accent",
-    }
+    Suspension = Color3.fromHex("00E5FF"),
+    Footrest   = Color3.fromRGB(255, 255, 255),
+    Deck       = Color3.fromRGB(255, 255, 255),
+    Cables     = Color3.fromHex("00E5FF"),
+    Bars       = Color3.fromRGB(255, 255, 255),
+    Grips      = Color3.fromRGB(255, 255, 255),
+    Brakes     = Color3.fromHex("00E5FF"),
+    Stem       = Color3.fromRGB(255, 255, 255),
 })
 
 MakeRecolorToggle({
     Name = "Black and White (VESC)",
     Flag = "BlackAndWhite",
-    Accent = Color3.fromRGB(255, 255, 255),
-    Body   = Color3.fromRGB(27, 42, 53),
-    Patterns = {
-        ["brake"]  = "accent",
-        ["fender"] = "body",
-    }
+    Suspension = Color3.fromRGB(255, 255, 255),
+    Footrest   = Color3.fromRGB(27, 42, 53),
+    Deck       = Color3.fromRGB(27, 42, 53),
+    Cables     = Color3.fromRGB(255, 255, 255),
+    Bars       = Color3.fromRGB(27, 42, 53),
+    Grips      = Color3.fromRGB(255, 255, 255),
+    Brakes     = Color3.fromRGB(255, 255, 255),
+    Stem       = Color3.fromRGB(27, 42, 53),
 })
 
 MakeRecolorToggle({
     Name = "Black and Red (VESC)",
     Flag = "BlackAndRed",
-    Accent = Color3.fromRGB(255, 0, 0),
-    Body   = Color3.fromRGB(27, 42, 53),
-    Patterns = {
-        ["brake"]  = "accent",
-        ["fender"] = "body",
-    }
+    Suspension = Color3.fromRGB(255, 0, 0),
+    Footrest   = Color3.fromRGB(27, 42, 53),
+    Deck       = Color3.fromRGB(27, 42, 53),
+    Cables     = Color3.fromRGB(255, 0, 0),
+    Bars       = Color3.fromRGB(27, 42, 53),
+    Grips      = Color3.fromRGB(255, 0, 0),
+    Brakes     = Color3.fromRGB(255, 0, 0),
+    Stem       = Color3.fromRGB(27, 42, 53),
 })
 
 MakeRecolorToggle({
     Name = "Blackout (VESC)",
     Flag = "Blackout",
-    Accent = Color3.fromRGB(27, 42, 53),
-    Body   = Color3.fromRGB(27, 42, 53),
-    Patterns = {
-        ["brake"]  = "accent",
-        ["fender"] = "body",
-    }
+    Suspension = Color3.fromRGB(27, 42, 53),
+    Footrest   = Color3.fromRGB(27, 42, 53),
+    Deck       = Color3.fromRGB(27, 42, 53),
+    Cables     = Color3.fromRGB(27, 42, 53),
+    Bars       = Color3.fromRGB(27, 42, 53),
+    Grips      = Color3.fromRGB(27, 42, 53),
+    Brakes     = Color3.fromRGB(27, 42, 53),
+    Stem       = Color3.fromRGB(27, 42, 53),
 })
 
 MakeRecolorToggle({
     Name = "Black and Purple (VESC)",
     Flag = "BlackAndPurple",
-    Accent = Color3.fromRGB(98, 37, 209),
-    Body   = Color3.fromRGB(27, 42, 53),
-    Patterns = {
-        ["brake"]  = "accent",
-        ["fender"] = "body",
-    }
+    Suspension = Color3.fromRGB(98, 37, 209),
+    Footrest   = Color3.fromRGB(27, 42, 53),
+    Deck       = Color3.fromRGB(27, 42, 53),
+    Cables     = Color3.fromRGB(98, 37, 209),
+    Bars       = Color3.fromRGB(27, 42, 53),
+    Grips      = Color3.fromRGB(98, 37, 209),
+    Brakes     = Color3.fromRGB(98, 37, 209),
+    Stem       = Color3.fromRGB(27, 42, 53),
 })
 
 MakeRecolorToggle({
     Name = "White and Red (VESC)",
     Flag = "WhiteAndRed",
-    Accent = Color3.fromRGB(255, 0, 0),
-    Body   = Color3.fromRGB(255, 255, 255),
-    Patterns = {
-        ["brake"]  = "accent",
-        ["fender"] = "accent",
-    }
+    Suspension = Color3.fromRGB(255, 0, 0),
+    Footrest   = Color3.fromRGB(255, 255, 255),
+    Deck       = Color3.fromRGB(255, 255, 255),
+    Cables     = Color3.fromRGB(255, 0, 0),
+    Bars       = Color3.fromRGB(255, 255, 255),
+    Grips      = Color3.fromRGB(255, 0, 0),
+    Brakes     = Color3.fromRGB(255, 0, 0),
+    Stem       = Color3.fromRGB(255, 255, 255),
 })
 
 MakeRecolorToggle({
     Name = "Purple Blackout (VESC)",
     Flag = "PurpleBlackout",
-    Accent = Color3.fromHex("2E0A3E"),
-    Body   = Color3.fromHex("0E0B14"),
-    Patterns = {
-        ["brake"]  = "accent",
-        ["fender"] = "accent",
-    }
+    Suspension = Color3.fromHex("2E0A3E"),
+    Footrest   = Color3.fromHex("0E0B14"),
+    Deck       = Color3.fromHex("0E0B14"),
+    Cables     = Color3.fromHex("2E0A3E"),
+    Bars       = Color3.fromHex("0E0B14"),
+    Grips      = Color3.fromHex("2E0A3E"),
+    Brakes     = Color3.fromHex("2E0A3E"),
+    Stem       = Color3.fromHex("0E0B14"),
 })
 
 -- ============================
--- CUSTOM COLOR (granular per-part)
+-- CUSTOM COLOR
 -- ============================
 
 Tabs.Main:AddSection("Custom Color")
@@ -433,76 +433,40 @@ local Custom_Enabled = false
 local Custom_Connection = nil
 local Custom_Originals = {}
 
-local Custom_Color = {
+local Custom_Colors = {
     Suspension = Color3.fromRGB(255, 0, 0),
-    Stem       = Color3.fromRGB(255, 0, 0),
-    Handlebar  = Color3.fromRGB(255, 255, 255),
-    Grips      = Color3.fromRGB(255, 255, 255),
-    MiddlePart = Color3.fromRGB(255, 0, 0),
+    Footrest   = Color3.fromRGB(255, 255, 255),
     Deck       = Color3.fromRGB(255, 255, 255),
-    WheelieBar = Color3.fromRGB(255, 255, 255),
-    Body       = Color3.fromRGB(255, 255, 255),
+    Cables     = Color3.fromRGB(0, 255, 255),
+    Bars       = Color3.fromRGB(255, 255, 255),
+    Grips      = Color3.fromRGB(255, 255, 255),
+    Brakes     = Color3.fromRGB(255, 0, 0),
+    Stem       = Color3.fromRGB(255, 255, 255),
 }
 
-local Custom_Groups = {
-    ["FrontSuspension"] = "Suspension",
-    ["BackSuspension"]  = "Suspension",
-    ["Plane.001"]       = "Stem",
-    ["Plane.005"]       = "Stem",
-    ["Plane.007"]       = "Stem",
-    ["Cylinder.004"]    = "Handlebar",
-    ["Cylinder.006"]    = "Grips",
-    ["Cylinder.007"]    = "Grips",
-    ["2"]               = "MiddlePart",
-    ["2.001"]           = "MiddlePart",
-    ["imagetostl_mesh1"]= "MiddlePart",
-    ["Untitled"]        = "Deck",
-    ["Box106"]          = "WheelieBar",
-    ["Plane.002"]       = "Body",
-    ["Plane.012"]       = "Body",
-}
-
-local function Custom_GetColorFor(obj)
-    local group = Custom_Groups[obj.Name]
-    if group then
-        return Custom_Color[group]
-    end
-    local lower = obj.Name:lower()
-    if lower:find("brake", 1, true)  then return Custom_Color.MiddlePart end
-    if lower:find("fender", 1, true) then return Custom_Color.Body       end
-    return nil
-end
-
-local function Custom_ProcessPart(obj)
-    if not Custom_Enabled then return end
-    if not obj:IsA("BasePart") then return end
+local function Custom_Process(obj)
+    if not Custom_Enabled or not obj:IsA("BasePart") then return end
     if VESC_Destroy[obj.Name] then
         pcall(function() obj:Destroy() end)
         return
     end
-    local color = Custom_GetColorFor(obj)
-    if color then
-        if not Custom_Originals[obj] then
-            Custom_Originals[obj] = obj.Color
-        end
-        pcall(function() obj.Color = color end)
-    end
+    local role = ROLES[obj.Name]
+    if not role then return end
+    local key = role:sub(1,1):upper() .. role:sub(2)
+    local color = Custom_Colors[key]
+    if not color then return end
+    if not Custom_Originals[obj] then Custom_Originals[obj] = obj.Color end
+    pcall(function() obj.Color = color end)
 end
 
 local function Custom_ApplyAll()
     if not Custom_Enabled then return end
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        Custom_ProcessPart(obj)
-    end
+    for _, obj in ipairs(workspace:GetDescendants()) do Custom_Process(obj) end
 end
 
 local function Custom_Restore()
     for part, originalColor in pairs(Custom_Originals) do
-        pcall(function()
-            if part and part.Parent then
-                part.Color = originalColor
-            end
-        end)
+        pcall(function() if part and part.Parent then part.Color = originalColor end end)
     end
     Custom_Originals = {}
 end
@@ -516,94 +480,63 @@ Tabs.Main:AddToggle("CustomColorEnabled", {
             Custom_Originals = {}
             Custom_ApplyAll()
             if Custom_Connection then Custom_Connection:Disconnect() end
-            Custom_Connection = workspace.DescendantAdded:Connect(Custom_ProcessPart)
+            Custom_Connection = workspace.DescendantAdded:Connect(Custom_Process)
         else
-            if Custom_Connection then
-                Custom_Connection:Disconnect()
-                Custom_Connection = nil
-            end
+            if Custom_Connection then Custom_Connection:Disconnect() Custom_Connection = nil end
             Custom_Restore()
         end
     end
 })
 
-Tabs.Main:AddColorpicker("CustomSuspension", {
+Tabs.Main:AddColorpicker("CC_Suspension", {
     Title = "Suspension Color",
-    Default = Custom_Color.Suspension,
-    Callback = function(Value)
-        Custom_Color.Suspension = Value
-        if Custom_Enabled then Custom_ApplyAll() end
-    end
+    Default = Custom_Colors.Suspension,
+    Callback = function(Value) Custom_Colors.Suspension = Value; Custom_ApplyAll() end
 })
-
-Tabs.Main:AddColorpicker("CustomStem", {
-    Title = "Stem / Fork Color",
-    Default = Custom_Color.Stem,
-    Callback = function(Value)
-        Custom_Color.Stem = Value
-        if Custom_Enabled then Custom_ApplyAll() end
-    end
+Tabs.Main:AddColorpicker("CC_Footrest", {
+    Title = "Footrest Color",
+    Default = Custom_Colors.Footrest,
+    Callback = function(Value) Custom_Colors.Footrest = Value; Custom_ApplyAll() end
 })
-
-Tabs.Main:AddColorpicker("CustomHandlebar", {
-    Title = "Handlebar Color",
-    Default = Custom_Color.Handlebar,
-    Callback = function(Value)
-        Custom_Color.Handlebar = Value
-        if Custom_Enabled then Custom_ApplyAll() end
-    end
-})
-
-Tabs.Main:AddColorpicker("CustomGrips", {
-    Title = "Grip Color",
-    Default = Custom_Color.Grips,
-    Callback = function(Value)
-        Custom_Color.Grips = Value
-        if Custom_Enabled then Custom_ApplyAll() end
-    end
-})
-
-Tabs.Main:AddColorpicker("CustomMiddlePart", {
-    Title = "MIDDLEPART Color",
-    Default = Custom_Color.MiddlePart,
-    Callback = function(Value)
-        Custom_Color.MiddlePart = Value
-        if Custom_Enabled then Custom_ApplyAll() end
-    end
-})
-
-Tabs.Main:AddColorpicker("CustomDeck", {
+Tabs.Main:AddColorpicker("CC_Deck", {
     Title = "Deck Color",
-    Default = Custom_Color.Deck,
-    Callback = function(Value)
-        Custom_Color.Deck = Value
-        if Custom_Enabled then Custom_ApplyAll() end
-    end
+    Default = Custom_Colors.Deck,
+    Callback = function(Value) Custom_Colors.Deck = Value; Custom_ApplyAll() end
 })
-
-Tabs.Main:AddColorpicker("CustomWheelieBar", {
-    Title = "Wheelie Bar Color",
-    Default = Custom_Color.WheelieBar,
-    Callback = function(Value)
-        Custom_Color.WheelieBar = Value
-        if Custom_Enabled then Custom_ApplyAll() end
-    end
+Tabs.Main:AddColorpicker("CC_Cables", {
+    Title = "Cables Color",
+    Default = Custom_Colors.Cables,
+    Callback = function(Value) Custom_Colors.Cables = Value; Custom_ApplyAll() end
 })
-
-Tabs.Main:AddColorpicker("CustomBody", {
-    Title = "Body Panel Color",
-    Default = Custom_Color.Body,
-    Callback = function(Value)
-        Custom_Color.Body = Value
-        if Custom_Enabled then Custom_ApplyAll() end
-    end
+Tabs.Main:AddColorpicker("CC_Bars", {
+    Title = "Bars Color",
+    Default = Custom_Colors.Bars,
+    Callback = function(Value) Custom_Colors.Bars = Value; Custom_ApplyAll() end
+})
+Tabs.Main:AddColorpicker("CC_Grips", {
+    Title = "Grips Color",
+    Default = Custom_Colors.Grips,
+    Callback = function(Value) Custom_Colors.Grips = Value; Custom_ApplyAll() end
+})
+Tabs.Main:AddColorpicker("CC_Brakes", {
+    Title = "Brakes Color",
+    Default = Custom_Colors.Brakes,
+    Callback = function(Value) Custom_Colors.Brakes = Value; Custom_ApplyAll() end
+})
+Tabs.Main:AddColorpicker("CC_Stem", {
+    Title = "Stem Color",
+    Default = Custom_Colors.Stem,
+    Callback = function(Value) Custom_Colors.Stem = Value; Custom_ApplyAll() end
 })
 
 -- ============================
--- UNDERGLOW (owner-aware, starts ON)
+-- UNDERGLOW (OFF by default, no flashing, smooth rainbow)
 -- ============================
 
-local Underglow_Enabled = true
+Tabs.Main:AddSection("Underglow")
+
+local Underglow_Enabled = false
+local Underglow_Rainbow = false
 local Underglow_Color = Color3.fromRGB(0, 220, 255)
 local MyScooter = nil
 
@@ -630,24 +563,15 @@ local function FindMyScooter()
                     end
                 end
             end
-
             if not ownerName then
                 for _, child in ipairs(obj:GetChildren()) do
                     if child.Name:lower():find("owner", 1, true) then
-                        if child:IsA("ObjectValue") and child.Value then
-                            ownerName = child.Value.Name
-                            break
-                        elseif child:IsA("StringValue") then
-                            ownerName = child.Value
-                            break
-                        end
+                        if child:IsA("ObjectValue") and child.Value then ownerName = child.Value.Name break
+                        elseif child:IsA("StringValue") then ownerName = child.Value break end
                     end
                 end
             end
-
-            if ownerName and ownerName == LocalPlayer.Name then
-                return obj
-            end
+            if ownerName and ownerName == LocalPlayer.Name then return obj end
         end
     end
     return nil
@@ -672,85 +596,128 @@ local function EnableUnderglowAttribute(scooter)
     pcall(function() scooter:SetAttribute("UnderglowEnabled", true) end)
 end
 
-local function ApplyUnderglow()
-    if not MyScooter or not Underglow_Enabled then return end
-
-    for _, obj in ipairs(MyScooter:GetDescendants()) do
-        if obj:IsA("BasePart") and (obj.Name == "Underglow" or obj.Name == "UnderglowPool") then
-            for _, c in ipairs(obj:GetDescendants()) do
-                if c:IsA("Light") then
-                    c.Enabled = true
-                    c.Color = Underglow_Color
-                elseif c:IsA("ImageLabel") then
-                    c.Visible = true
-                    c.ImageColor3 = Underglow_Color
-                end
+local function CollectUnderglowParts()
+    local parts = {}
+    if MyScooter then
+        for _, obj in ipairs(MyScooter:GetDescendants()) do
+            if obj:IsA("BasePart") and (obj.Name == "Underglow" or obj.Name == "UnderglowPool") then
+                table.insert(parts, obj)
             end
-            obj.Color = Underglow_Color
         end
     end
-
     for _, folder in ipairs(GetUnderglowFolders()) do
         for _, obj in ipairs(folder:GetChildren()) do
             if obj:IsA("BasePart") and (obj.Name == "Underglow" or obj.Name == "UnderglowPool") then
-                for _, c in ipairs(obj:GetDescendants()) do
-                    if c:IsA("Light") then
-                        c.Enabled = true
-                        c.Color = Underglow_Color
-                    elseif c:IsA("ImageLabel") then
-                        c.Visible = true
-                        c.ImageColor3 = Underglow_Color
-                    end
-                end
-                obj.Color = Underglow_Color
+                table.insert(parts, obj)
             end
+        end
+    end
+    return parts
+end
+
+local function ApplyColorToPart(obj, col)
+    pcall(function() obj.Color = col end)
+    for _, c in ipairs(obj:GetDescendants()) do
+        if c:IsA("Light") then
+            c.Enabled = true
+            c.Color = col
+        elseif c:IsA("ImageLabel") then
+            c.Visible = true
+            c.ImageColor3 = col
         end
     end
 end
 
+local Underglow_RainbowConn = nil
+
+local function StartUnderglowRainbow()
+    if Underglow_RainbowConn then return end
+    Underglow_RainbowConn = RunService.RenderStepped:Connect(function()
+        if not Underglow_Enabled or not Underglow_Rainbow then return end
+        if not MyScooter then return end
+        local col = Color3.fromHSV((tick() * 0.3) % 1, 1, 1)
+        for _, obj in ipairs(CollectUnderglowParts()) do
+            ApplyColorToPart(obj, col)
+        end
+    end)
+end
+
+local function StopUnderglowRainbow()
+    if Underglow_RainbowConn then
+        Underglow_RainbowConn:Disconnect()
+        Underglow_RainbowConn = nil
+    end
+end
+
+local LastStaticColor = nil
+
+local function ApplyUnderglowStatic(force)
+    if not MyScooter or not Underglow_Enabled then return end
+    if Underglow_Rainbow then return end
+    local col = Underglow_Color
+    if not force and LastStaticColor == col then return end
+    LastStaticColor = col
+    for _, obj in ipairs(CollectUnderglowParts()) do
+        ApplyColorToPart(obj, col)
+    end
+end
+
+local function HideUnderglow()
+    for _, obj in ipairs(CollectUnderglowParts()) do
+        for _, c in ipairs(obj:GetDescendants()) do
+            if c:IsA("Light") then c.Enabled = false
+            elseif c:IsA("ImageLabel") then c.Visible = false end
+        end
+    end
+    LastStaticColor = nil
+end
+
 task.spawn(function()
     while true do
-        task.wait(0.5)
+        task.wait(1)
         MyScooter = FindMyScooter()
         if MyScooter and Underglow_Enabled then
             EnableUnderglowAttribute(MyScooter)
+            if not Underglow_Rainbow then
+                ApplyUnderglowStatic(false)
+            end
         end
-    end
-end)
-
-RunService.Heartbeat:Connect(function()
-    if Underglow_Enabled and MyScooter then
-        ApplyUnderglow()
-        task.defer(ApplyUnderglow)
     end
 end)
 
 Tabs.Main:AddToggle("Underglow", {
     Title = "Underglow",
-    Default = true,
+    Default = false,
     Callback = function(Value)
         Underglow_Enabled = Value
-        ApplyUnderglow()
-        if not Value then
-            if MyScooter then
-                for _, obj in ipairs(MyScooter:GetDescendants()) do
-                    if obj:IsA("BasePart") and (obj.Name == "Underglow" or obj.Name == "UnderglowPool") then
-                        for _, c in ipairs(obj:GetDescendants()) do
-                            if c:IsA("Light") then c.Enabled = false
-                            elseif c:IsA("ImageLabel") then c.Visible = false end
-                        end
-                    end
-                end
+        if Value then
+            MyScooter = FindMyScooter()
+            if MyScooter then EnableUnderglowAttribute(MyScooter) end
+            if Underglow_Rainbow then
+                StartUnderglowRainbow()
+            else
+                LastStaticColor = nil
+                ApplyUnderglowStatic(true)
             end
-            for _, folder in ipairs(GetUnderglowFolders()) do
-                for _, obj in ipairs(folder:GetChildren()) do
-                    if obj:IsA("BasePart") and (obj.Name == "Underglow" or obj.Name == "UnderglowPool") then
-                        for _, c in ipairs(obj:GetDescendants()) do
-                            if c:IsA("Light") then c.Enabled = false
-                            elseif c:IsA("ImageLabel") then c.Visible = false end
-                        end
-                    end
-                end
+        else
+            StopUnderglowRainbow()
+            HideUnderglow()
+        end
+    end
+})
+
+Tabs.Main:AddToggle("UnderglowRainbow", {
+    Title = "Underglow Rainbow",
+    Default = false,
+    Callback = function(Value)
+        Underglow_Rainbow = Value
+        if Value then
+            if Underglow_Enabled then StartUnderglowRainbow() end
+        else
+            StopUnderglowRainbow()
+            if Underglow_Enabled then
+                LastStaticColor = nil
+                ApplyUnderglowStatic(true)
             end
         end
     end
@@ -761,7 +728,91 @@ Tabs.Main:AddColorpicker("UnderglowColor", {
     Default = Color3.fromRGB(0, 220, 255),
     Callback = function(Value)
         Underglow_Color = Value
-        if Underglow_Enabled then ApplyUnderglow() end
+        Underglow_Rainbow = false
+        StopUnderglowRainbow()
+        if Options.UnderglowRainbow then
+            Options.UnderglowRainbow:SetValue(false)
+        end
+        if Underglow_Enabled then
+            LastStaticColor = nil
+            ApplyUnderglowStatic(true)
+        end
+    end
+})
+
+-- ============================
+-- BURNOUT SMOKE
+-- ============================
+
+Tabs.Main:AddSection("Burnout Smoke")
+
+local Burnout_Enabled = false
+local Burnout_Rainbow = false
+local Burnout_Color = Color3.fromRGB(230, 230, 230)
+local Burnout_Emitters = {}
+local Burnout_DescConn = nil
+
+local function TrackEmitter(e)
+    if not e:IsA("ParticleEmitter") then return end
+    if not e.Name:lower():find("burnout", 1, true) then return end
+    if Burnout_Emitters[e] then return end
+    Burnout_Emitters[e] = true
+end
+
+RunService.RenderStepped:Connect(function()
+    if not Burnout_Enabled then return end
+    local col
+    if Burnout_Rainbow then
+        col = Color3.fromHSV((tick() * 0.3) % 1, 1, 1)
+    else
+        col = Burnout_Color
+    end
+    for e in pairs(Burnout_Emitters) do
+        if e and e.Parent then
+            e.Color = ColorSequence.new(col)
+        else
+            Burnout_Emitters[e] = nil
+        end
+    end
+end)
+
+Tabs.Main:AddToggle("BurnoutSmoke", {
+    Title = "Burnout Smoke",
+    Default = false,
+    Callback = function(Value)
+        Burnout_Enabled = Value
+        if Value then
+            for _, o in ipairs(Workspace:GetDescendants()) do
+                if o:IsA("ParticleEmitter") then TrackEmitter(o) end
+            end
+            Burnout_DescConn = Workspace.DescendantAdded:Connect(function(o)
+                if Burnout_Enabled then TrackEmitter(o) end
+            end)
+        else
+            if Burnout_DescConn then Burnout_DescConn:Disconnect() Burnout_DescConn = nil end
+            for e in pairs(Burnout_Emitters) do
+                if e and e.Parent then
+                    e.Color = ColorSequence.new(Color3.fromRGB(225, 225, 225))
+                end
+            end
+            Burnout_Emitters = {}
+        end
+    end
+})
+
+Tabs.Main:AddToggle("BurnoutRainbow", {
+    Title = "Burnout Smoke Rainbow",
+    Default = false,
+    Callback = function(Value) Burnout_Rainbow = Value end
+})
+
+Tabs.Main:AddColorpicker("BurnoutColor", {
+    Title = "Burnout Smoke Color",
+    Default = Color3.fromRGB(230, 230, 230),
+    Callback = function(Value)
+        Burnout_Color = Value
+        Burnout_Rainbow = false
+        if Options.BurnoutRainbow then Options.BurnoutRainbow:SetValue(false) end
     end
 })
 
@@ -771,13 +822,9 @@ Tabs.Main:AddColorpicker("UnderglowColor", {
 
 local RainbowSusp_Connection = nil
 
-local RAINBOW_SUSP_NAMES = {
-    ["FrontSuspension"] = true,
-    ["BackSuspension"]  = true,
-}
-
 local function RainbowSusp_Process(obj)
-    if RAINBOW_SUSP_NAMES[obj.Name] and obj:IsA("BasePart") then
+    local role = ROLES[obj.Name]
+    if role == "suspension" and obj:IsA("BasePart") then
         AddRainbowPart(obj, "RainbowSuspension")
     end
 end
@@ -805,36 +852,9 @@ Tabs.Main:AddToggle("RainbowSuspension", {
 
 local RainbowAll_Connection = nil
 
-local RAINBOW_ALL_NAMES = {
-    ["FrontSuspension"]   = true,
-    ["BackSuspension"]    = true,
-    ["Plane.001"]         = true,
-    ["Plane.002"]         = true,
-    ["Plane.005"]         = true,
-    ["Plane.006"]         = true,
-    ["Plane.007"]         = true,
-    ["Plane.012"]         = true,
-    ["Plane.018"]         = true,
-    ["Plane.019"]         = true,
-    ["Plane.004"]         = true,
-    ["Cylinder.002"]      = true,
-    ["Cylinder.004"]      = true,
-    ["Cylinder.006"]      = true,
-    ["Cylinder.007"]      = true,
-    ["imagetostl_mesh1"]  = true,
-    ["Sticker"]           = true,
-    ["Stickers"]          = true,
-    ["Box106"]            = true,
-    ["Untitled"]          = true,
-    ["2"]                 = true,
-    ["2.001"]             = true,
-}
-
 local function RainbowAll_Process(obj)
     if not obj:IsA("BasePart") then return end
-    if RAINBOW_ALL_NAMES[obj.Name]
-       or obj.Name:lower():find("brake", 1, true)
-       or obj.Name:lower():find("fender", 1, true) then
+    if ROLES[obj.Name] then
         AddRainbowPart(obj, "RainbowAll")
     end
 end
@@ -863,13 +883,8 @@ Tabs.Main:AddToggle("RainbowAll", {
 local BackFender_Connection = nil
 
 local BACK_FENDER_NAMES = {
-    ["VisualBackFender"] = true,
-    ["BackFender"]       = true,
-    ["Object002.009"]    = true,
-    ["TailLight"]        = true,
-    ["Plane1211.002"]    = true,
-    ["Circle2041.002"]   = true,
-    ["Circle2071.002"]   = true,
+    ["VisualBackFender"]=true, ["BackFender"]=true, ["Object002.009"]=true,
+    ["TailLight"]=true, ["Plane1211.002"]=true, ["Circle2041.002"]=true, ["Circle2071.002"]=true,
 }
 
 local function BackFender_Process(obj)
@@ -883,49 +898,55 @@ Tabs.Main:AddToggle("RemoveBackFender", {
     Default = false,
     Callback = function(Value)
         if Value then
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                BackFender_Process(obj)
-            end
+            for _, obj in ipairs(workspace:GetDescendants()) do BackFender_Process(obj) end
             BackFender_Connection = workspace.DescendantAdded:Connect(BackFender_Process)
         else
             if BackFender_Connection then
                 BackFender_Connection:Disconnect()
                 BackFender_Connection = nil
             end
+        end    end
+})
+
+-- ============================
+-- REMOVE BRAKE DISCS
+-- ============================
+
+local FrontBrake_Connection = nil
+local FRONT_BRAKE_NAMES = {
+    ["Object002.001"]=true, ["Circle2071.001"]=true,
+    ["Circle2041.001"]=true, ["Plane1211.001"]=true,
+}
+local function FrontBrake_Process(obj)
+    if FRONT_BRAKE_NAMES[obj.Name] then pcall(function() obj:Destroy() end) end
+end
+Tabs.Main:AddToggle("RemoveFrontBrake", {
+    Title = "Remove Front Wheel Brake Disc",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            for _, obj in ipairs(workspace:GetDescendants()) do FrontBrake_Process(obj) end
+            FrontBrake_Connection = workspace.DescendantAdded:Connect(FrontBrake_Process)
+        else
+            if FrontBrake_Connection then FrontBrake_Connection:Disconnect() FrontBrake_Connection = nil end
         end
     end
 })
 
--- ============================
--- REMOVE FRONT WHEEL BRAKE
--- ============================
-
-local FrontBrake_Connection = nil
-
-local FRONT_BRAKE_NAMES = {
-    ["Object002.001"] = true,
-}
-
-local function FrontBrake_Process(obj)
-    if FRONT_BRAKE_NAMES[obj.Name] then
-        pcall(function() obj:Destroy() end)
-    end
+local BackBrake_Connection = nil
+local BACK_BRAKE_NAMES = { ["Object002.002"] = true }
+local function BackBrake_Process(obj)
+    if BACK_BRAKE_NAMES[obj.Name] then pcall(function() obj:Destroy() end) end
 end
-
-Tabs.Main:AddToggle("RemoveFrontBrake", {
-    Title = "Remove Front Wheel Brake",
+Tabs.Main:AddToggle("RemoveBackBrake", {
+    Title = "Remove Back Wheel Brake Disc",
     Default = false,
     Callback = function(Value)
         if Value then
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                FrontBrake_Process(obj)
-            end
-            FrontBrake_Connection = workspace.DescendantAdded:Connect(FrontBrake_Process)
+            for _, obj in ipairs(workspace:GetDescendants()) do BackBrake_Process(obj) end
+            BackBrake_Connection = workspace.DescendantAdded:Connect(BackBrake_Process)
         else
-            if FrontBrake_Connection then
-                FrontBrake_Connection:Disconnect()
-                FrontBrake_Connection = nil
-            end
+            if BackBrake_Connection then BackBrake_Connection:Disconnect() BackBrake_Connection = nil end
         end
     end
 })
@@ -1001,23 +1022,145 @@ local function AutoWheelie_SetAnchored(state)
     local character = LocalPlayer.Character
     if not character then return end
     local root = character:FindFirstChild("HumanoidRootPart")
-    if root then
-        pcall(function() root.Anchored = state end)
-    end
+    if root then pcall(function() root.Anchored = state end) end
 end
 
 LocalPlayer.CharacterAdded:Connect(function(character)
     local root = character:WaitForChild("HumanoidRootPart", 5)
-    if root then
-        pcall(function() root.Anchored = AutoWheelie_Anchored end)
-    end
+    if root then pcall(function() root.Anchored = AutoWheelie_Anchored end) end
 end)
 
 Tabs.Main:AddToggle("AutoWheelie", {
     Title = "Auto Wheelie",
     Default = false,
+    Callback = function(Value) AutoWheelie_SetAnchored(Value) end
+})
+
+-- ============================
+-- KEYSTROKES
+-- ============================
+
+Tabs.Main:AddSection("Keystrokes")
+
+local Keystrokes_Enabled = false
+local Keystrokes_Gui = nil
+local Keystrokes_Conn = nil
+
+local function BuildKeystrokes()
+    local ScreenGui = Instance.new("ScreenGui")
+    local Frame = Instance.new("Frame")
+
+    ScreenGui.Name = "KeystrokesGui"
+    ScreenGui.Parent = game:GetService("CoreGui")
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.ResetOnSpawn = false
+
+    Frame.Parent = ScreenGui
+    Frame.BackgroundTransparency = 1
+    Frame.Position = UDim2.new(0.05, 0, 0.55, 0)
+    Frame.Size = UDim2.new(0, 172, 0, 190)
+
+    local KEY_BG    = Color3.fromRGB(25, 25, 28)
+    local KEY_BG_TR = 0.35
+    local PRESS_BG  = Color3.fromRGB(235, 235, 240)
+    local TEXT_COL  = Color3.fromRGB(235, 235, 240)
+    local PRESS_TXT = Color3.fromRGB(20, 20, 24)
+
+    local function makeKey(name, pos, size, label)
+        local k = Instance.new("TextLabel")
+        k.Name = name
+        k.Parent = Frame
+        k.BackgroundColor3 = KEY_BG
+        k.BackgroundTransparency = KEY_BG_TR
+        k.BorderSizePixel = 0
+        k.Position = pos
+        k.Size = size
+        k.Font = Enum.Font.GothamBold
+        k.Text = label
+        k.TextColor3 = TEXT_COL
+        k.TextSize = 20
+        Instance.new("UICorner", k).CornerRadius = UDim.new(0, 6)
+        return k
+    end
+
+    local wkey = makeKey("wkey", UDim2.new(0, 58, 0, 0),  UDim2.new(0, 56, 0, 46), "W")
+    local akey = makeKey("akey", UDim2.new(0, 0,  0, 48), UDim2.new(0, 56, 0, 46), "A")
+    local skey = makeKey("skey", UDim2.new(0, 58, 0, 48), UDim2.new(0, 56, 0, 46), "S")
+    local dkey = makeKey("dkey", UDim2.new(0, 116,0, 48), UDim2.new(0, 56, 0, 46), "D")
+    local lmb  = makeKey("lmb",  UDim2.new(0, 0,   0, 96), UDim2.new(0, 86, 0, 46), "LMB")
+    local rmb  = makeKey("rmb",  UDim2.new(0, 86,  0, 96), UDim2.new(0, 86, 0, 46), "RMB")
+    local ctrl = makeKey("ctrl", UDim2.new(0, 0,   0, 144), UDim2.new(0, 172, 0, 46), "CTRL")
+
+    do
+        local gui = Frame
+        local dragging, dragInput, dragStart, startPos
+        gui.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = gui.Position
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end)
+        gui.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
+                dragInput = input
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if input == dragInput and dragging then
+                local delta = input.Position - dragStart
+                gui.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + delta.X,
+                    startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                )
+            end
+        end)
+    end
+
+    local function setKey(key, pressed)
+        if pressed then
+            key.BackgroundColor3 = PRESS_BG
+            key.TextColor3 = PRESS_TXT
+        else
+            key.BackgroundColor3 = KEY_BG
+            key.TextColor3 = TEXT_COL
+        end
+    end
+
+    Keystrokes_Conn = RunService.Heartbeat:Connect(function()
+        if not Keystrokes_Enabled then return end
+        setKey(wkey, UserInputService:IsKeyDown(Enum.KeyCode.W))
+        setKey(akey, UserInputService:IsKeyDown(Enum.KeyCode.A))
+        setKey(skey, UserInputService:IsKeyDown(Enum.KeyCode.S))
+        setKey(dkey, UserInputService:IsKeyDown(Enum.KeyCode.D))
+        setKey(lmb,  UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1))
+        setKey(rmb,  UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2))
+        local ctrlDown = UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)
+            or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
+        setKey(ctrl, ctrlDown)
+    end)
+
+    Keystrokes_Gui = ScreenGui
+end
+
+local function DestroyKeystrokes()
+    if Keystrokes_Gui then pcall(function() Keystrokes_Gui:Destroy() end) Keystrokes_Gui = nil end
+    if Keystrokes_Conn then pcall(function() Keystrokes_Conn:Disconnect() end) Keystrokes_Conn = nil end
+end
+
+Tabs.Main:AddToggle("Keystrokes", {
+    Title = "Keystrokes",
+    Default = false,
     Callback = function(Value)
-        AutoWheelie_SetAnchored(Value)
+        Keystrokes_Enabled = Value
+        if Value then BuildKeystrokes() else DestroyKeystrokes() end
     end
 })
 
@@ -1034,12 +1177,7 @@ local function ApplyStretch()
     local Camera = workspace.CurrentCamera
     if not Camera then return end
     Stretch_Connection = RunService.RenderStepped:Connect(function()
-        Camera.CFrame = Camera.CFrame * CFrame.new(
-            0, 0, 0,
-            1, 0, 0,
-            0, Stretch_Resolution, 0,
-            0, 0, 1
-        )
+        Camera.CFrame = Camera.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, Stretch_Resolution, 0, 0, 0, 1)
     end)
 end
 
