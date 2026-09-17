@@ -319,18 +319,6 @@ end
 -- COLOR TOGGLES
 -- ============================
 
-MakeRecolorToggle({
-    Name = "Pink Blossom (VESC)",
-    Flag = "PinkBlossom",
-    Suspension = Color3.fromHex("FFB7C5"),
-    Footrest   = Color3.fromRGB(255, 255, 255),
-    Deck       = Color3.fromRGB(255, 255, 255),
-    Cables     = Color3.fromHex("FFB7C5"),
-    Bars       = Color3.fromRGB(255, 255, 255),
-    Grips      = Color3.fromRGB(255, 255, 255),
-    Brakes     = Color3.fromHex("FFB7C5"),
-    Stem       = Color3.fromRGB(255, 255, 255),
-})
 
 MakeRecolorToggle({
     Name = "Cyan Accents (VESC)",
